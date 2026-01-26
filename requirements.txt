@@ -1,2 +1,2 @@
 python-telegram-bot==20.5
-pymongo==4.4.1
+pymongo
