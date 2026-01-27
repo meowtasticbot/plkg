@@ -199,19 +199,21 @@ async def on_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"💰 You found {bonus} bonus coins while chatting!")
 
     cats.update_one({"_id": cat["_id"]}, {"$set": cat})
-
+    
 # ---------------- TOURNAMENT DATA ----------------
 current_tournament = {
     "active": False,
-    "participants": {},       # {user_id: score}
-    "entry_paid": set(),      # who paid the fee
-    "end_time": None
+    "participants": {},  # {user_id: score}
+    "entry_paid": set(),  # who paid the fee
+    "end_time": None,
+    "group_id": None  # store group where tournament started
 }
 ENTRY_FEE = 500
 
 # ---------------- FISH COMMAND ----------------
 async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    chat_id = update.effective_chat.id
     cat = get_cat(user)
     inventory = cat.get("inventory", {})
     now = datetime.now(timezone.utc)
@@ -265,21 +267,10 @@ async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reward = random.randint(5000, 10000) + bait_bonus + streak_bonus
         cat["coins"] += reward
         msg = f"{bait_msg}{random.choice(jackpot_msgs)}\n🔥 JACKPOT! +🪙 {reward}"
-        try:
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=f"🌟 {user.first_name} hit the JACKPOT and won 🪙 {reward} coins!"
-            )
-        except:
-            pass
-
-    # ---------------- NORMAL PROFIT ----------------
     elif roll <= 90:
         reward = random.randint(400, 1000) + bait_bonus + streak_bonus
         cat["coins"] += reward
         msg = f"{bait_msg}{random.choice(profit_msgs)}\n💰 +🪙 {reward}\n🎁 Streak Bonus: {streak_bonus}"
-
-    # ---------------- LOSS ----------------
     else:
         loss = random.randint(1000, 2000)
         if cat["coins"] < loss:
@@ -300,9 +291,13 @@ async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cat["inventory"] = inventory
     await update.message.reply_text(msg)
 
+    # ---------------- CHECK TO END TOURNAMENT ----------------
+    if current_tournament["active"] and datetime.now(timezone.utc) >= current_tournament["end_time"]:
+        await end_tournament(context)
+
 # ---------------- LEADERBOARD ----------------
 async def fishlb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    top = sorted(cats.values(), key=lambda x: x.get("fish_total_earned",0), reverse=True)[:5]
+    top = sorted(cats.values(), key=lambda x: x.get("fish_total_earned", 0), reverse=True)[:5]
     text = "🏆 Top Fishing Legends 🏆\n\n"
     for i, u in enumerate(top, start=1):
         text += f"{i}. {u.get('name','Cat')} — 🪙 {u.get('fish_total_earned',0)}\n"
@@ -311,6 +306,7 @@ async def fishlb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- TOURNAMENT START / STATUS ----------------
 async def tournament(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    chat_id = update.effective_chat.id
     cat = get_cat(user)
 
     if not current_tournament["active"]:
@@ -324,6 +320,7 @@ async def tournament(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_tournament["participants"] = {}
         current_tournament["entry_paid"] = {user.id}
         current_tournament["end_time"] = datetime.now(timezone.utc) + timedelta(minutes=10)
+        current_tournament["group_id"] = chat_id
 
         await update.message.reply_text(
             f"🏆 {user.first_name} started a Tournament!\n🎟 Entry fee 🪙 {ENTRY_FEE} paid.\n🎣 Minimum 3 players required to finish.\nOther players can join by paying the fee and using /fish!"
@@ -343,11 +340,14 @@ async def tournament(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- END TOURNAMENT ----------------
 async def end_tournament(context):
+    group_id = current_tournament["group_id"]
     players = current_tournament["participants"]
+
     if len(players) < 3:
-        await context.bot.send_message(chat_id=YOUR_MAIN_CHAT_ID, text="❌ Tournament ended. Not enough participants.")
+        await context.bot.send_message(chat_id=group_id, text="❌ Tournament ended. Not enough participants.")
         current_tournament["active"] = False
         current_tournament["entry_paid"].clear()
+        current_tournament["group_id"] = None
         return
 
     sorted_players = sorted(players.items(), key=lambda x: x[1], reverse=True)
@@ -362,10 +362,12 @@ async def end_tournament(context):
         text += f"{medals[i]} Player {uid} — 🎣 {score} | 🪙 {rewards[i]}\n"
 
     text += "\n🎉 Tournament finished!"
-    await context.bot.send_message(chat_id=YOUR_MAIN_CHAT_ID, text=text)
+    await context.bot.send_message(chat_id=group_id, text=text)
+
     current_tournament["active"] = False
     current_tournament["entry_paid"].clear()
-    
+    current_tournament["group_id"] = None
+
 # ---- /xp command ----
 async def xp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cat = get_cat(update.effective_user)
