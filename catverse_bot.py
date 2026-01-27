@@ -338,6 +338,11 @@ async def tournament_loop(app):
             current_tournament["end_time"] = datetime.now(timezone.utc) + timedelta(minutes=10)
             print("🏆 Tournament Started")
 
+# ---------------- POST INIT ----------------
+# ✅ Background task safe start
+async def post_init(application):
+    application.create_task(tournament_loop(application))
+
 # ---------------- END TOURNAMENT ----------------
 async def end_tournament(context):
     players = current_tournament["participants"]
@@ -1183,13 +1188,18 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================= MAIN =================
 
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .post_init(post_init)  # ✅ Safe background task start
+        .build()
+    )
 
     app.add_handler(CommandHandler("games", games))
     app.add_handler(CommandHandler("xp", xp))
     app.add_handler(CommandHandler("me", me))
     app.add_handler(CommandHandler("daily", daily))
-    app.add_handler(CommandHandler("claim", claim))  # 👈 NEW
+    app.add_handler(CommandHandler("claim", claim))
     app.add_handler(CommandHandler("bal", bal))
     app.add_handler(CommandHandler("give", give))
     app.add_handler(CommandHandler("gift", gift))
@@ -1211,12 +1221,7 @@ def main():
     app.add_handler(CommandHandler("tournament", tournament))
     app.add_handler(CommandHandler("fishlb", fishlb))
 
-    app.create_task(tournament_loop(app))
-
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_chat))
 
     print("🐱 CATVERSE FULLY UPGRADED & RUNNING...")
     app.run_polling()
-
-if __name__ == "__main__":
-    main()
