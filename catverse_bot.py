@@ -55,6 +55,10 @@ def get_cat(user):
         "last_daily": None,
         "last_claim": None,  # 👈 ADD THI
         "last_rob": {},
+        "inventory": {"fish_bait": 0},
+        "fish_streak": 0,
+        "last_fish_date": None,
+        "fish_total_earned": 0
         "wanted": 0,
         "created": datetime.now(timezone.utc),
     }
@@ -345,9 +349,154 @@ async def post_init(application):
 
 # ---------------- END TOURNAMENT ----------------
 async def end_tournament(context):
+# ---------------- TOURNAMENT DATA ----------------
+current_tournament = {
+    "active": False,
+    "participants": {},       # {user_id: score}
+    "entry_paid": set(),      # who paid the fee
+    "end_time": None
+}
+ENTRY_FEE = 500
+
+# ---------------- FISH COMMAND ----------------
+async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    cat = get_cat(user)
+    inventory = cat.get("inventory", {})
+    now = datetime.now(timezone.utc)
+
+    # ---------------- STREAK SYSTEM ----------------
+    today = now.date().isoformat()
+    last_date = cat.get("last_fish_date")
+    streak = cat.get("fish_streak", 0)
+    if last_date == today:
+        streak += 1
+    else:
+        streak = 1
+    cat["fish_streak"] = streak
+    cat["last_fish_date"] = today
+    streak_bonus = min(streak * 20, 200)
+
+    # ---------------- BAIT BONUS ----------------
+    bait_bonus = 0
+    bait_msg = ""
+    if inventory.get("fish_bait", 0) > 0:
+        bait_bonus = random.randint(50, 150)
+        inventory["fish_bait"] -= 1
+        bait_msg = "🐟 Magic bait boosted your luck!\n"
+
+    roll = random.randint(1, 100)
+
+    jackpot_msgs = [
+        "💎 LEGENDARY DRAGON FISH!",
+        "🐉 Mythical sea beast with treasure!",
+        "🌟 Ancient glowing fish surfaced!",
+    ]
+
+    profit_msgs = [
+        "🎣 Smooth catch!",
+        "🐠 Coin-filled fish!",
+        "🌊 Lucky wave reward!",
+        "🏝️ Pirate fish haul!",
+    ]
+
+    loss_msgs = [
+        "🦈 Sharks robbed you!",
+        "🌪️ Storm destroyed net!",
+        "🐙 Octopus tax taken!",
+        "🏴‍☠️ Pirates stole catch!",
+    ]
+
+    reward = 0
+
+    # ---------------- JACKPOT ----------------
+    if roll == 1:
+        reward = random.randint(5000, 10000) + bait_bonus + streak_bonus
+        cat["coins"] += reward
+        msg = f"{bait_msg}{random.choice(jackpot_msgs)}\n🔥 JACKPOT! +🪙 {reward}"
+        try:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"🌟 {user.first_name} hit the JACKPOT and won 🪙 {reward} coins!"
+            )
+        except:
+            pass
+
+    # ---------------- NORMAL PROFIT ----------------
+    elif roll <= 90:
+        reward = random.randint(400, 1000) + bait_bonus + streak_bonus
+        cat["coins"] += reward
+        msg = f"{bait_msg}{random.choice(profit_msgs)}\n💰 +🪙 {reward}\n🎁 Streak Bonus: {streak_bonus}"
+
+    # ---------------- LOSS ----------------
+    else:
+        loss = random.randint(1000, 2000)
+        if cat["coins"] < loss:
+            loss = max(50, int(cat["coins"] * 0.5))
+        cat["coins"] -= loss
+        msg = f"{random.choice(loss_msgs)}\n💸 Lost 🪙 {loss}"
+
+    # ---------------- TOURNAMENT SCORE ----------------
+    if current_tournament["active"] and user.id in current_tournament["entry_paid"] and reward > 0:
+        uid = user.id
+        current_tournament["participants"][uid] = current_tournament["participants"].get(uid, 0) + reward
+
+    # ---------------- LEADERBOARD TRACK ----------------
+    if reward > 0:
+        cat["fish_total_earned"] = cat.get("fish_total_earned", 0) + reward
+
+    # ---------------- SAVE ----------------
+    cat["inventory"] = inventory
+    await update.message.reply_text(msg)
+
+# ---------------- LEADERBOARD ----------------
+async def fishlb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    top = sorted(cats.values(), key=lambda x: x.get("fish_total_earned",0), reverse=True)[:5]
+    text = "🏆 Top Fishing Legends 🏆\n\n"
+    for i, u in enumerate(top, start=1):
+        text += f"{i}. {u.get('name','Cat')} — 🪙 {u.get('fish_total_earned',0)}\n"
+    await update.message.reply_text(text)
+
+# ---------------- TOURNAMENT START / STATUS ----------------
+async def tournament(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    cat = get_cat(user)
+
+    if not current_tournament["active"]:
+        # Start tournament manually
+        if cat["coins"] < ENTRY_FEE:
+            await update.message.reply_text(f"❌ You need 🪙 {ENTRY_FEE} to start the tournament!")
+            return
+
+        cat["coins"] -= ENTRY_FEE
+        current_tournament["active"] = True
+        current_tournament["participants"] = {}
+        current_tournament["entry_paid"] = {user.id}
+        current_tournament["end_time"] = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+        await update.message.reply_text(
+            f"🏆 {user.first_name} started a Tournament!\n🎟 Entry fee 🪙 {ENTRY_FEE} paid.\n🎣 Minimum 3 players required to finish.\nOther players can join by paying the fee and using /fish!"
+        )
+    else:
+        # Join tournament
+        if user.id in current_tournament["entry_paid"]:
+            await update.message.reply_text("✅ You have already joined the tournament! Use /fish to play.")
+            return
+        if cat["coins"] < ENTRY_FEE:
+            await update.message.reply_text(f"❌ You need 🪙 {ENTRY_FEE} to join the tournament!")
+            return
+
+        cat["coins"] -= ENTRY_FEE
+        current_tournament["entry_paid"].add(user.id)
+        await update.message.reply_text(f"🎟 {user.first_name} joined the tournament! Use /fish to participate.")
+
+# ---------------- END TOURNAMENT ----------------
+async def end_tournament(context):
     players = current_tournament["participants"]
     if len(players) < 3:
+        await context.bot.send_message(chat_id=YOUR_MAIN_CHAT_ID, text="❌ Tournament ended. Not enough participants.")
         current_tournament["active"] = False
+        current_tournament["entry_paid"].clear()
         return
 
     sorted_players = sorted(players.items(), key=lambda x: x[1], reverse=True)
@@ -355,26 +504,16 @@ async def end_tournament(context):
     rewards = [3000, 2000, 1000]
 
     text = "🏆 Fishing Tournament Results 🏆\n\n"
-    for i in range(3):
+    for i in range(min(3, len(sorted_players))):
         uid, score = sorted_players[i]
-        cats.update_one({"_id": uid}, {"$inc": {"coins": rewards[i]}})
+        if uid in cats:
+            cats[uid]["coins"] += rewards[i]
         text += f"{medals[i]} Player {uid} — 🎣 {score} | 🪙 {rewards[i]}\n"
-        try:
-            await context.bot.send_message(uid, f"🏆 You won #{i+1} in tournament and earned 🪙 {rewards[i]}!")
-        except:
-            pass
 
     text += "\n🎉 Tournament finished!"
-    await context.bot.send_message(chat_id=-1002406550980, text=text)
+    await context.bot.send_message(chat_id=YOUR_MAIN_CHAT_ID, text=text)
     current_tournament["active"] = False
-
-# ---------------- TOURNAMENT STATUS ----------------
-async def tournament(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not current_tournament["active"]:
-        await update.message.reply_text("❌ No tournament right now.")
-        return
-    mins = (current_tournament["end_time"] - datetime.now(timezone.utc)).seconds // 60
-    await update.message.reply_text(f"🏆 Tournament LIVE!\n⏳ {mins} min left\n🎟 Entry Fee: 500 coins\n🎣 Use /fish!")
+    current_tournament["entry_paid"].clear()
     
 # ---- /xp command ----
 async def xp(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1185,15 +1324,10 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Current Level: {cat['level']}"
     )
 
-# ================= MAIN =================
+#  ================= MAIN =================
 
 def main():
-    app = (
-        ApplicationBuilder()
-        .token(BOT_TOKEN)
-        .post_init(post_init)  # ✅ Safe background task start
-        .build()
-    )
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("games", games))
     app.add_handler(CommandHandler("xp", xp))
@@ -1223,5 +1357,8 @@ def main():
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_chat))
 
-    print("🐱 CATVERSE FULLY UPGRADED & RUNNING...")
+    print("ðŸ± CATVERSE FULLY UPGRADED & RUNNING...")
     app.run_polling()
+
+if __name__ == "__main__":
+    main()
