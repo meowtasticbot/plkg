@@ -468,7 +468,7 @@ async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ================= PROTECTION COMMAND =================
 
-async def protection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def protect(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cat = get_cat(update.effective_user)
     now = datetime.now(timezone.utc)
 
