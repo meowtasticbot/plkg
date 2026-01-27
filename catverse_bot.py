@@ -98,27 +98,40 @@ def calculate_global_rank(user_id):
 async def games(update: Update, context: ContextTypes.DEFAULT_TYPE):
     level_text = "\n".join([f"{lvl} → {req} XP" for lvl, req in LEVELS])
     text = (
-        "🐱 CATVERSE GUIDE\n\n"
-        "💰 /daily — Daily coins (DM only)\n"
-        "💰 /bal — Check your balance\n"
-        "💸 /give — Gift coins to someone (reply)\n"
-        "😼 /rob — Rob a cat (reply + amount)\n"
-        "⚔️ /kill — Attack a cat (reply)\n"
-        "🛡 /protect — Enable 1 day protection\n"
-        "🛒 /shop — Show shop items\n"
-        "🛒 /buy <item> <amount> — Buy shop items\n"
-        "🎒 /inventory — Check your items\n"
-        "📊 /me — View your profile\n"
-        "🏆 /toprich — Top richest cats\n"
-        "⚔️ /topkill — Top fighters\n"
-        "🎲 /fun — Random fun command\n\n"
-        "🎮 Chat to gain XP & trigger fish events 🐟\n\n"
+        "🐱 *CATVERSE GUIDE*\n\n"
+
+        "💰 Economy:\n"
+        "  /daily — Daily coins (DM only)\n"
+        "  /claim — Group reward (1000+ members)\n"
+        "  /bal — Check balance\n"
+        "  /give <amount> — Gift coins (reply)\n\n"
+
+        "⚔️ Combat:\n"
+        "  /rob <amount> — Rob a cat\n"
+        "  /kill — Attack a cat\n"
+        "  /protect — 24h protection\n\n"
+
+        "🛒 Shop & Items:\n"
+        "  /shop — Shop items\n"
+        "     🐟 Fish Bait, 🚔 Bail Pass, 🍀 Luck Boost, 🛡 Shield, 💣 Shield Breaker\n"
+        "  /inventory — Your items\n"
+        "  /use <item> — Activate item (shield, shield_breaker, luck_boost, bail_pass, fish_bait)\n\n"
+
+        "🐟 Fishing & Events:\n"
+        "  Chat to gain XP & trigger fish events\n"
+        "  /fish — Catch fish, rare boosted by Fish Bait\n\n"
+
+        "📊 Profile & Stats:\n"
+        "  /me — Profile\n"
+        "  /toprich — Richest cats\n"
+        "  /topkill — Top fighters\n"
+        "  /xp — Check XP & DNA stats\n"
+        "  Levels: 🐱 Kitten → 😺 Teen → 😼 Rogue → 🐯 Alpha → 👑 Legend\n"
         f"📈 Levels:\n{level_text}"
     )
     await update.message.reply_text(text)
 
-# ================= PASSIVE XP =================
-
+# ---- Passive XP system ----
 async def on_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -134,13 +147,13 @@ async def on_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     evolve(cat)
     if old_level != cat["level"]:
         await update.message.reply_text(f"✨ Your cat evolved into {cat['level']}!")
+    # Random Fish Event 5%
     if random.random() < 0.05:
         context.chat_data["fish_event"] = True
         await update.message.reply_text("🐟 A magic fish appeared! Type: eat | save | share")
     cats.update_one({"_id": cat["_id"]}, {"$set": cat})
 
-# ================= FISH EVENT =================
-
+# ---- Fish Event ----
 async def fish_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.chat_data.get("fish_event"):
         return
@@ -164,6 +177,23 @@ async def fish_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data.pop("fish_event")
     cats.update_one({"_id": cat["_id"]}, {"$set": cat})
     await update.message.reply_text(msg)
+
+# ---- /xp command ----
+async def xp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cat = get_cat(update.effective_user)
+    stats = cat["dna"]
+    text = (
+        f"📊 *Your Cat Stats*\n"
+        f"Level: {cat['level']}\n"
+        f"XP: {cat['xp']}\n\n"
+        f"🧬 DNA Stats:\n"
+        f"▫️ Aggression: {stats['aggression']}\n"
+        f"▫️ Intelligence: {stats['intelligence']}\n"
+        f"▫️ Luck: {stats['luck']}\n"
+        f"▫️ Charm: {stats['charm']}\n"
+        f"🐟 Fish: {cat['fish']}"
+    )
+    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 # ================= ECONOMY =================
 
@@ -898,6 +928,7 @@ def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("games", games))
+    app.add_handler(CommandHandler("xp", xp))
     app.add_handler(CommandHandler("me", me))
     app.add_handler(CommandHandler("daily", daily))
     app.add_handler(CommandHandler("claim", claim))  # 👈 NEW
