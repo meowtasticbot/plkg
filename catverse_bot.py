@@ -597,11 +597,11 @@ async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mention = f"<a href='tg://user?id={target_user.id}'>{target_user.first_name}</a>"
 
     await update.message.reply_text(
-        f"🐾 {mention} — <b>Level:</b> {cat['level']}\n"
-        f"<b>Money:</b> ${cat['coins']}\n"
-        f"<b>Rank:</b> #{rank}\n"
-        f"<b>Fish:</b> {cat['fish']}\n"
-        f"<b>Wins:</b> {cat['kills']} | <b>Deaths:</b> {cat['deaths']}\n\n"
+        f"🐾 {mention} — \n\n<b>🐾 Level:</b> {cat['level']}\n"
+        f"<b>💰 Money:</b> ${cat['coins']}\n"
+        f"<b>🏆 Rank:</b> #{rank}\n"
+        f"<b>🐟 Fish:</b> {cat['fish']}\n"
+        f"<b>⚔️ Wins:</b> {cat['kills']} | <b>💀 Deaths:</b> {cat['deaths']}\n\n"
         f"<b>DNA →</b> 😼 {d['aggression']} | 🧠 {d['intelligence']} | 🍀 {d['luck']} | 💖 {d['charm']}",
         parse_mode="HTML"
     )
