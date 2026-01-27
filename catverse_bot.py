@@ -200,20 +200,9 @@ async def on_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cats.update_one({"_id": cat["_id"]}, {"$set": cat})
     
-# ---------------- TOURNAMENT DATA ----------------
-current_tournament = {
-    "active": False,
-    "participants": {},  # {user_id: score}
-    "entry_paid": set(),  # who paid the fee
-    "end_time": None,
-    "group_id": None  # store group where tournament started
-}
-ENTRY_FEE = 500
-
 # ---------------- FISH COMMAND ----------------
 async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    chat_id = update.effective_chat.id
     cat = get_cat(user)
     inventory = cat.get("inventory", {})
     now = datetime.now(timezone.utc)
@@ -263,25 +252,20 @@ async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reward = 0
 
     # ---------------- JACKPOT ----------------
-    if roll == 1:
+    if roll == 1:  # 1% jackpot
         reward = random.randint(5000, 10000) + bait_bonus + streak_bonus
         cat["coins"] += reward
         msg = f"{bait_msg}{random.choice(jackpot_msgs)}\n🔥 JACKPOT! +🪙 {reward}"
-    elif roll <= 90:
+    elif 2 <= roll <= 71:  # 70% normal gain
         reward = random.randint(400, 1000) + bait_bonus + streak_bonus
         cat["coins"] += reward
         msg = f"{bait_msg}{random.choice(profit_msgs)}\n💰 +🪙 {reward}\n🎁 Streak Bonus: {streak_bonus}"
-    else:
+    else:  # 29% loss
         loss = random.randint(1000, 2000)
         if cat["coins"] < loss:
             loss = max(50, int(cat["coins"] * 0.5))
         cat["coins"] -= loss
         msg = f"{random.choice(loss_msgs)}\n💸 Lost 🪙 {loss}"
-
-    # ---------------- TOURNAMENT SCORE ----------------
-    if current_tournament["active"] and user.id in current_tournament["entry_paid"] and reward > 0:
-        uid = user.id
-        current_tournament["participants"][uid] = current_tournament["participants"].get(uid, 0) + reward
 
     # ---------------- LEADERBOARD TRACK ----------------
     if reward > 0:
@@ -291,10 +275,6 @@ async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cat["inventory"] = inventory
     await update.message.reply_text(msg)
 
-    # ---------------- CHECK TO END TOURNAMENT ----------------
-    if current_tournament["active"] and datetime.now(timezone.utc) >= current_tournament["end_time"]:
-        await end_tournament(context)
-
 # ---------------- LEADERBOARD ----------------
 async def fishlb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     top = sorted(cats.values(), key=lambda x: x.get("fish_total_earned", 0), reverse=True)[:5]
@@ -302,71 +282,6 @@ async def fishlb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for i, u in enumerate(top, start=1):
         text += f"{i}. {u.get('name','Cat')} — 🪙 {u.get('fish_total_earned',0)}\n"
     await update.message.reply_text(text)
-
-# ---------------- TOURNAMENT START / STATUS ----------------
-async def tournament(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    chat_id = update.effective_chat.id
-    cat = get_cat(user)
-
-    if not current_tournament["active"]:
-        # Start tournament manually
-        if cat["coins"] < ENTRY_FEE:
-            await update.message.reply_text(f"❌ You need 🪙 {ENTRY_FEE} to start the tournament!")
-            return
-
-        cat["coins"] -= ENTRY_FEE
-        current_tournament["active"] = True
-        current_tournament["participants"] = {}
-        current_tournament["entry_paid"] = {user.id}
-        current_tournament["end_time"] = datetime.now(timezone.utc) + timedelta(minutes=10)
-        current_tournament["group_id"] = chat_id
-
-        await update.message.reply_text(
-            f"🏆 {user.first_name} started a Tournament!\n🎟 Entry fee 🪙 {ENTRY_FEE} paid.\n🎣 Minimum 3 players required to finish.\nOther players can join by paying the fee and using /fish!"
-        )
-    else:
-        # Join tournament
-        if user.id in current_tournament["entry_paid"]:
-            await update.message.reply_text("✅ You have already joined the tournament! Use /fish to play.")
-            return
-        if cat["coins"] < ENTRY_FEE:
-            await update.message.reply_text(f"❌ You need 🪙 {ENTRY_FEE} to join the tournament!")
-            return
-
-        cat["coins"] -= ENTRY_FEE
-        current_tournament["entry_paid"].add(user.id)
-        await update.message.reply_text(f"🎟 {user.first_name} joined the tournament! Use /fish to participate.")
-
-# ---------------- END TOURNAMENT ----------------
-async def end_tournament(context):
-    group_id = current_tournament["group_id"]
-    players = current_tournament["participants"]
-
-    if len(players) < 3:
-        await context.bot.send_message(chat_id=group_id, text="❌ Tournament ended. Not enough participants.")
-        current_tournament["active"] = False
-        current_tournament["entry_paid"].clear()
-        current_tournament["group_id"] = None
-        return
-
-    sorted_players = sorted(players.items(), key=lambda x: x[1], reverse=True)
-    medals = ["🥇", "🥈", "🥉"]
-    rewards = [3000, 2000, 1000]
-
-    text = "🏆 Fishing Tournament Results 🏆\n\n"
-    for i in range(min(3, len(sorted_players))):
-        uid, score = sorted_players[i]
-        if uid in cats:
-            cats[uid]["coins"] += rewards[i]
-        text += f"{medals[i]} Player {uid} — 🎣 {score} | 🪙 {rewards[i]}\n"
-
-    text += "\n🎉 Tournament finished!"
-    await context.bot.send_message(chat_id=group_id, text=text)
-
-    current_tournament["active"] = False
-    current_tournament["entry_paid"].clear()
-    current_tournament["group_id"] = None
 
 # ---- /xp command ----
 async def xp(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1205,7 +1120,6 @@ def main():
     app.add_handler(CallbackQueryHandler(shop_system, pattern="^shop:"))
     app.add_handler(CommandHandler("fun", fun))
     app.add_handler(CommandHandler("upgrade", upgrade))
-    app.add_handler(CommandHandler("tournament", tournament))
     app.add_handler(CommandHandler("fishlb", fishlb))
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_chat))
