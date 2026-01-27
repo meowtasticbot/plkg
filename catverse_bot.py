@@ -499,7 +499,20 @@ async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
     attacker_mention = f"<a href='tg://user?id={attacker_user.id}'>{attacker_user.first_name}</a>"
     victim_mention = f"<a href='tg://user?id={victim_user.id}'>{victim_user.first_name}</a>"
 
-    # 🪦 Check if victim already dead
+    # 🛡 PROTECTION CHECK (same system style as rob)
+    if victim["inventory"].get("vip_shield", 0) > 0:
+        return await update.message.reply_text(
+            f"👑 {victim_mention} is protected by a VIP Shield!",
+            parse_mode="HTML"
+        )
+
+    if victim["inventory"].get("shield", 0) > 0 or is_protected(victim):
+        return await update.message.reply_text(
+            f"🛡 {victim_mention} is protected right now!",
+            parse_mode="HTML"
+        )
+
+    # 🪦 Already dead check
     if victim.get("health", 100) <= 0:
         return await update.message.reply_text(
             f"☠️ {victim_mention} is already dead!\nNo need to attack again 😼",
@@ -513,7 +526,7 @@ async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
     victim["deaths"] += 1
     attacker["coins"] += reward
 
-    # Victim health zero kar do
+    # Victim health zero
     victim["health"] = 0
 
     cats.update_one({"_id": attacker["_id"]}, {"$set": attacker})
@@ -526,18 +539,20 @@ async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
-    # 📩 DM to victim (bot open ho ya na ho, try hoga)
+    # 📩 DM to victim
     try:
         await context.bot.send_message(
             chat_id=victim_user.id,
             text=(
-                f"🚨 You were attacked by {attacker_user.first_name}!\n"
+                f"🚨 <b>You were attacked!</b>\n"
+                f"⚔️ Attacker: {attacker_mention}\n"
                 f"💀 You lost the fight and are now dead.\n"
-                f"❤️ Your health is 0."
-            )
+                f"❤️ Health: 0"
+            ),
+            parse_mode="HTML"
         )
-    except Exception:
-        pass  # DM failed (user never started bot or blocked).
+    except:
+        pass
         
 # ================= PROTECTION COMMAND =================
 
