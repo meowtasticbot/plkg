@@ -196,89 +196,180 @@ async def on_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cats.update_one({"_id": cat["_id"]}, {"$set": cat})
 
-# ------------------- FISHING EVENT (ADVANCED BALANCED - FIXED) -------------------
-async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cat = get_cat(update.effective_user)
-    inventory = cat.get("inventory", {})
+ENTRY_FEE = 500  # 🎟 Tournament entry fee
 
+# ---------------- TOURNAMENT DATA ----------------
+current_tournament = {
+    "active": False,
+    "participants": {},
+    "end_time": None
+}
+
+# ---------------- FISH COMMAND ----------------
+async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    cat = get_cat(user)
+    inventory = cat.get("inventory", {})
     now = datetime.now(timezone.utc)
 
-    # ---------------- COOLDOWN SYSTEM ----------------
-    last_fish_time = cat.get("last_fish_time")
-    level = cat.get("level", "🐱 Kitten")
+    # ---------------- TOURNAMENT ENTRY CHECK ----------------
+    if current_tournament["active"]:
+        if user.id not in current_tournament["participants"]:
+            if cat["coins"] < ENTRY_FEE:
+                await update.message.reply_text("❌ Tournament entry fee is 500 coins!")
+                return
+            cat["coins"] -= ENTRY_FEE
+            current_tournament["participants"][user.id] = 0
+            await update.message.reply_text("🎟 You joined the tournament! Entry fee paid.")
 
-    level_number = 1
-    for i, (name, _) in enumerate(LEVELS, start=1):
-        if name == level:
-            level_number = i
-            break
+    # ---------------- STREAK SYSTEM ----------------
+    today = now.date().isoformat()
+    last_date = cat.get("last_fish_date")
+    streak = cat.get("fish_streak", 0)
 
-    cooldown = timedelta(minutes=max(20, 60 - (level_number * 2)))
+    if last_date == today:
+        streak += 1
+    else:
+        streak = 1
 
-    if last_fish_time:
-        try:
-            last_time = datetime.fromisoformat(last_fish_time)
-            if last_time.tzinfo is None:
-                last_time = last_time.replace(tzinfo=timezone.utc)
+    cat["fish_streak"] = streak
+    cat["last_fish_date"] = today
+    streak_bonus = min(streak * 20, 200)
 
-            remaining = (last_time + cooldown) - now
-            if remaining.total_seconds() > 0:
-                mins = int(remaining.total_seconds() // 60)
-                secs = int(remaining.total_seconds() % 60)
-                return await update.message.reply_text(
-                    f"⏳ Your cat is resting...\nCome back in {mins}m {secs}s 🐾"
-                )
-        except:
-            pass
-
-    cat["last_fish_time"] = now.isoformat()
-
-    # ---------------- BAIT BONUS (CAPPED) ----------------
-    rare_bonus = 0
+    # ---------------- BAIT BONUS ----------------
+    bait_bonus = 0
+    bait_msg = ""
     if inventory.get("fish_bait", 0) > 0:
-        rare_bonus = 10   # ❗ capped
+        bait_bonus = random.randint(50, 150)
         inventory["fish_bait"] -= 1
-        await update.message.reply_text("🐟 Fish bait used! +10% luck 🍀")
+        bait_msg = "🐟 Magic bait boosted your luck!\n"
 
     roll = random.randint(1, 100)
 
-    # ---------------- OUTCOME ----------------
-    if roll <= 3:
-        reward = random.randint(2000, 4000)
+    jackpot_msgs = [
+        "💎 LEGENDARY DRAGON FISH!",
+        "🐉 Mythical sea beast with treasure!",
+        "🌟 Ancient glowing fish surfaced!",
+    ]
+
+    profit_msgs = [
+        "🎣 Smooth catch!",
+        "🐠 Coin-filled fish!",
+        "🌊 Lucky wave reward!",
+        "🏝️ Pirate fish haul!",
+    ]
+
+    loss_msgs = [
+        "🦈 Sharks robbed you!",
+        "🌪️ Storm destroyed net!",
+        "🐙 Octopus tax taken!",
+        "🏴‍☠️ Pirates stole catch!",
+    ]
+
+    reward = 0
+
+    # ---------------- JACKPOT ----------------
+    if roll == 1:
+        reward = random.randint(5000, 10000) + bait_bonus + streak_bonus
         cat["coins"] += reward
-        msg = f"🐟✨ MYTHIC TUNA!\nYour cat earned 🪙 {reward}!"
+        msg = f"{bait_msg}{random.choice(jackpot_msgs)}\n🔥 JACKPOT! +🪙 {reward}"
 
-    elif roll <= 15 + rare_bonus:
-        reward = 500
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"🌟 {user.first_name} hit the JACKPOT and won 🪙 {reward} coins!"
+        )
+
+    # ---------------- NORMAL PROFIT (90%) ----------------
+    elif roll <= 90:
+        reward = random.randint(400, 1000) + bait_bonus + streak_bonus
         cat["coins"] += reward
-        msg = f"🐠 Rare catch! +🪙 {reward}"
+        msg = f"{bait_msg}{random.choice(profit_msgs)}\n💰 +🪙 {reward}\n🎁 Streak Bonus: {streak_bonus}"
 
-    elif roll <= 40:
-        reward = 120
-        cat["coins"] += reward
-        msg = f"🐟 Small fish caught +🪙 {reward}"
-
-    elif roll <= 70:
-        loss = min(cat["coins"], random.randint(150, 500))
-        cat["coins"] -= loss
-        msg = f"🦈 Sea Dog attack! Lost 🪙 {loss}"
-
+    # ---------------- LOSS (10%) ----------------
     else:
-        loss = min(cat["coins"], random.randint(40, 120))
+        loss = random.randint(1000, 2000)
+        if cat["coins"] < loss:
+            loss = max(50, int(cat["coins"] * 0.5))
         cat["coins"] -= loss
-        msg = f"🌊 Torn net... lost 🪙 {loss}"
+        msg = f"{random.choice(loss_msgs)}\n💸 Lost 🪙 {loss}"
 
+    # ---------------- TOURNAMENT SCORE ----------------
+    if current_tournament["active"] and reward > 0 and user.id in current_tournament["participants"]:
+        current_tournament["participants"][user.id] += reward
+
+    # ---------------- LEADERBOARD TRACK ----------------
+    if reward > 0:
+        cat["fish_total_earned"] = cat.get("fish_total_earned", 0) + reward
+
+    # ---------------- SAVE USER ----------------
     cat["inventory"] = inventory
     cats.update_one(
         {"_id": cat["_id"]},
         {"$set": {
             "coins": cat["coins"],
-            "inventory": cat["inventory"],
-            "last_fish_time": cat["last_fish_time"]
+            "inventory": inventory,
+            "fish_total_earned": cat.get("fish_total_earned", 0),
+            "fish_streak": cat["fish_streak"],
+            "last_fish_date": cat["last_fish_date"]
         }}
     )
 
     await update.message.reply_text(msg)
+
+    # ---------------- TOURNAMENT END CHECK ----------------
+    if current_tournament["active"] and datetime.now(timezone.utc) >= current_tournament["end_time"]:
+        await end_tournament(context)
+
+# ---------------- LEADERBOARD ----------------
+async def fishlb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    top = cats.find().sort("fish_total_earned", -1).limit(5)
+    text = "🏆 Top Fishing Legends 🏆\n\n"
+    for i, u in enumerate(top, start=1):
+        text += f"{i}. {u.get('name','Cat')} — 🪙 {u.get('fish_total_earned',0)}\n"
+    await update.message.reply_text(text)
+
+# ---------------- TOURNAMENT LOOP ----------------
+async def tournament_loop(app):
+    while True:
+        await asyncio.sleep(1800)
+        if not current_tournament["active"]:
+            current_tournament["active"] = True
+            current_tournament["participants"] = {}
+            current_tournament["end_time"] = datetime.now(timezone.utc) + timedelta(minutes=10)
+            print("🏆 Tournament Started")
+
+# ---------------- END TOURNAMENT ----------------
+async def end_tournament(context):
+    players = current_tournament["participants"]
+    if len(players) < 3:
+        current_tournament["active"] = False
+        return
+
+    sorted_players = sorted(players.items(), key=lambda x: x[1], reverse=True)
+    medals = ["🥇", "🥈", "🥉"]
+    rewards = [3000, 2000, 1000]
+
+    text = "🏆 Fishing Tournament Results 🏆\n\n"
+    for i in range(3):
+        uid, score = sorted_players[i]
+        cats.update_one({"_id": uid}, {"$inc": {"coins": rewards[i]}})
+        text += f"{medals[i]} Player {uid} — 🎣 {score} | 🪙 {rewards[i]}\n"
+        try:
+            await context.bot.send_message(uid, f"🏆 You won #{i+1} in tournament and earned 🪙 {rewards[i]}!")
+        except:
+            pass
+
+    text += "\n🎉 Tournament finished!"
+    await context.bot.send_message(chat_id=-1002406550980, text=text)
+    current_tournament["active"] = False
+
+# ---------------- TOURNAMENT STATUS ----------------
+async def tournament(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not current_tournament["active"]:
+        await update.message.reply_text("❌ No tournament right now.")
+        return
+    mins = (current_tournament["end_time"] - datetime.now(timezone.utc)).seconds // 60
+    await update.message.reply_text(f"🏆 Tournament LIVE!\n⏳ {mins} min left\n🎟 Entry Fee: 500 coins\n🎣 Use /fish!")
     
 # ---- /xp command ----
 async def xp(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1117,6 +1208,10 @@ def main():
     app.add_handler(CallbackQueryHandler(shop_system, pattern="^shop:"))
     app.add_handler(CommandHandler("fun", fun))
     app.add_handler(CommandHandler("upgrade", upgrade))
+    app.add_handler(CommandHandler("tournament", tournament))
+    app.add_handler(CommandHandler("fishlb", fishlb))
+
+    app.create_task(tournament_loop(app))
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_chat))
 
