@@ -99,8 +99,16 @@ def evolve(cat):
             break
 
 def is_protected(cat):
-    return cat.get("protected_until") and cat["protected_until"] > datetime.now(timezone.utc)
+    protected_until = cat.get("protected_until")
+    if not protected_until:
+        return False
 
+    # 🛠 Convert naive datetime → UTC aware
+    if protected_until.tzinfo is None:
+        protected_until = protected_until.replace(tzinfo=timezone.utc)
+
+    return protected_until > datetime.now(timezone.utc)
+    
 def calculate_global_rank(user_id):
     all_cats = list(cats.find().sort("coins", -1))
     for idx, c in enumerate(all_cats, 1):
@@ -266,7 +274,8 @@ async def give(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"🐾 Sent ${final} after tax!")
 
-# ================= SHOP COMMAND =================
+# ================= SHOP =================
+
 async def shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton(f"🧾 {item.replace('_',' ').title()} — ${info['price']}", callback_data=f"view:{item}")]
@@ -318,7 +327,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ---------- BUY ITEM ----------
     elif query.data.startswith("buy:"):
-        _, item, amount = query.data.split(":")
+        parts = query.data.split(":")
+        if len(parts) != 3:
+            return await query.answer("Invalid request", show_alert=True)
+
+        _, item, amount = parts
         amount = int(amount)
 
         if item not in SHOP_ITEMS:
@@ -329,6 +342,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if cat["coins"] < cost:
             return await query.answer("💸 Not enough coins!", show_alert=True)
+
+        # ✅ Update inventory safely
+        if "inventory" not in cat or not isinstance(cat["inventory"], dict):
+            cat["inventory"] = {}
 
         cat["coins"] -= cost
         cat["inventory"][item] = cat["inventory"].get(item, 0) + amount
@@ -449,23 +466,27 @@ async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"⚔️ Victory! +${reward}")
 
-# ================= PROTECT =================
+# ================= PROTECTION COMMAND =================
 
-async def protect(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def protection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cat = get_cat(update.effective_user)
     now = datetime.now(timezone.utc)
 
     # ❗ Show usage if no argument
     if not context.args:
-        return await update.message.reply_text("⚠️ Usage: /protect 1d")
+        return await update.message.reply_text("⚠️ Usage: /protection 1d")
 
     # ❌ Only 1d allowed
     if context.args[0].lower() != "1d":
         return await update.message.reply_text("❗ Users can only use: 1d")
 
     # 🛡 Already protected check
-    if cat.get("protected_until") and cat["protected_until"] > now:
-        remaining = cat["protected_until"] - now
+    protected_until = cat.get("protected_until")
+    if protected_until and protected_until.tzinfo is None:
+        protected_until = protected_until.replace(tzinfo=timezone.utc)
+
+    if protected_until and protected_until > now:
+        remaining = protected_until - now
         hours = remaining.seconds // 3600
         minutes = (remaining.seconds % 3600) // 60
         days = remaining.days
@@ -494,7 +515,7 @@ async def protect(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cats.update_one({"_id": cat["_id"]}, {"$set": cat})
 
     await update.message.reply_text("🛡 Protection enabled for 1 day.")
-
+    
 # ================= LEADERBOARDS =================
 
 async def toprich(update: Update, context: ContextTypes.DEFAULT_TYPE):
