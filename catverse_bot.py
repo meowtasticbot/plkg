@@ -189,20 +189,23 @@ async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ---------------- COOLDOWN SYSTEM ----------------
     last_fish_time = cat.get("last_fish_time")
-
     level = cat.get("level", 1)
+
     cooldown_minutes = max(20, 60 - (level * 2))  # Higher level = less wait
     cooldown = timedelta(minutes=cooldown_minutes)
 
     if last_fish_time:
-        last_time = datetime.fromisoformat(last_fish_time)
-        if now < last_time + cooldown:
+        try:
+            last_time = datetime.fromisoformat(last_fish_time)
             remaining = (last_time + cooldown) - now
-            mins = remaining.seconds // 60
-            secs = remaining.seconds % 60
-            return await update.message.reply_text(
-                f"⏳ You must wait {mins}m {secs}s before fishing again!"
-            )
+            if remaining.total_seconds() > 0:
+                mins = int(remaining.total_seconds() // 60)
+                secs = int(remaining.total_seconds() % 60)
+                return await update.message.reply_text(
+                    f"⏳ You must wait {mins}m {secs}s before fishing again!"
+                )
+        except:
+            pass  # Agar old data ka format alag ho toh ignore
 
     # Save new fish time
     cat["last_fish_time"] = now.isoformat()
@@ -217,19 +220,19 @@ async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ---------------- OUTCOME ROLL ----------------
     roll = random.randint(1, 100)
 
-    # 🎏 GOLDEN FISH JACKPOT (2% base chance)
+    # 🎏 GOLDEN FISH JACKPOT
     if roll <= 2 + (rare_bonus // 3):
         reward = random.randint(2000, 4000)
         cat["coins"] += reward
-        msg = f"🎏✨ LEGENDARY GOLDEN FISH!!! You earned **${reward}** jackpot!"
+        msg = f"🎏✨ LEGENDARY GOLDEN FISH!!! You earned ${reward} jackpot!"
 
-    # 🦈 SHARK ATTACK (10% chance)
+    # 🦈 SHARK ATTACK
     elif roll <= 12:
         loss = min(cat["coins"], random.randint(100, 400))
         cat["coins"] -= loss
-        msg = f"🦈 OH NO! A shark attacked and you lost **${loss}**!"
+        msg = f"🦈 OH NO! A shark attacked and you lost ${loss}!"
 
-    # 🐠 RARE FISH (normal rare)
+    # 🐠 RARE FISH
     elif roll <= 30 + rare_bonus:
         reward = 500
         cat["coins"] += reward
@@ -253,7 +256,7 @@ async def fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     await update.message.reply_text(msg)
-
+    
 # ---- /xp command ----
 async def xp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cat = get_cat(update.effective_user)
