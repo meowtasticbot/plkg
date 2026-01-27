@@ -35,31 +35,6 @@ LEVELS = [
     ("👑 Legend Cat", 160),
 ]
 
-# ================= SHOP ITEMS =================
-
-SHOP_ITEMS = {
-    "fish_bait": {
-        "price": 80,
-        "desc": "🐟 Fish Bait — Increases chance to find rare magic fish during chat events"
-    },
-    "bail_pass": {
-        "price": 400,
-        "desc": "🚔 Bail Pass — Escape wanted penalty after failed crimes"
-    },
-    "luck_boost": {
-        "price": 250,
-        "desc": "🍀 Luck Boost — Improves robbery success rate (one-time use)"
-    },
-    "shield": {
-        "price": 350,
-        "desc": "🛡 Basic Shield — Blocks robberies for 1 full day"
-    },
-    "shield_breaker": {
-        "price": 800,
-        "desc": "💣 Shield Breaker — Destroys a target's protection during robbery"
-    },
-}
-
 # ================= DATABASE =================
 
 def get_cat(user):
@@ -279,100 +254,99 @@ async def give(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"🐾 Sent ${final} after tax!")
     
-# ================= SHOP =================
+# ================= SHOP SYSTEM =================
+
+SHOP_ITEMS = {
+    "fish_bait": {"price": 80, "desc": "🐟 Increases chance to find rare magic fish during chat events"},
+    "bail_pass": {"price": 400, "desc": "🚔 Escape wanted penalty after failed crimes"},
+    "luck_boost": {"price": 250, "desc": "🍀 Improves robbery success rate (one-time use)"},
+    "shield": {"price": 350, "desc": "🛡 Blocks robberies for 1 full day"},
+    "shield_breaker": {"price": 800, "desc": "💣 Destroys a target's protection during robbery"},
+}
+
 
 async def shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton(f"🧾 {item.replace('_',' ').title()} — ${info['price']}", callback_data=f"view:{item}")]
-        for item, info in SHOP_ITEMS.items()
+        [InlineKeyboardButton(f"{item.replace('_',' ').title()}", callback_data=f"shop:view:{item}")]
+        for item in SHOP_ITEMS
     ]
 
     await update.message.reply_text(
-        "🛒 *Catverse Black Market*\nChoose an item to see details:",
+        "🛒 *Catverse Black Market*",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
-# ================= BUTTON HANDLER =================
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def shop_system(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     cat = get_cat(query.from_user)
 
-    # ---------- VIEW ITEM ----------
-    if query.data.startswith("view:"):
-        item = query.data.split(":")[1]
-        info = SHOP_ITEMS.get(item)
+    # Ensure inventory exists
+    if "inventory" not in cat or not isinstance(cat["inventory"], dict):
+        cat["inventory"] = {}
 
-        if not info:
-            return await query.answer("Item not found", show_alert=True)
+    data = query.data
 
+    # ================= VIEW ITEM =================
+    if data.startswith("shop:view:"):
+        item = data.split(":")[2]
+        info = SHOP_ITEMS[item]
         owned = cat["inventory"].get(item, 0)
 
         text = (
-            f"🧾 *{item.replace('_',' ').title()}*\n"
+            f"🧾 *{item.replace('_',' ').title()}*\n\n"
             f"{info['desc']}\n\n"
-            f"💰 *Price:* ${info['price']}\n"
-            f"📦 *Owned:* {owned}"
+            f"💰 Price: *${info['price']}*\n"
+            f"📦 Owned: *{owned}*"
         )
 
         keyboard = [
-            [InlineKeyboardButton("🛒 Buy 1", callback_data=f"buy:{item}:1")],
-            [InlineKeyboardButton("🛒 Buy 5", callback_data=f"buy:{item}:5")],
-            [InlineKeyboardButton("🔙 Back", callback_data="back_shop")]
+            [InlineKeyboardButton("🛒 Purchase", callback_data=f"shop:buy:{item}")],
+            [InlineKeyboardButton("⬅ Back", callback_data="shop:back")]
         ]
 
-        return await query.edit_message_text(
+        await query.edit_message_text(
             text,
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    # ---------- BUY ITEM ----------
-    elif query.data.startswith("buy:"):
-        parts = query.data.split(":")
-        if len(parts) != 3:
-            return await query.answer("Invalid request", show_alert=True)
-
-        _, item, amount = parts
-        amount = int(amount)
-
-        if item not in SHOP_ITEMS:
-            return await query.answer("Item not found", show_alert=True)
-
+    # ================= BUY ITEM =================
+    elif data.startswith("shop:buy:"):
+        item = data.split(":")[2]
         price = SHOP_ITEMS[item]["price"]
-        cost = price * amount
 
-        if cat["coins"] < cost:
+        if cat["coins"] < price:
             return await query.answer("💸 Not enough coins!", show_alert=True)
 
-        # ✅ Update inventory safely
-        if "inventory" not in cat or not isinstance(cat["inventory"], dict):
-            cat["inventory"] = {}
+        cat["coins"] -= price
+        cat["inventory"][item] = cat["inventory"].get(item, 0) + 1
 
-        cat["coins"] -= cost
-        cat["inventory"][item] = cat["inventory"].get(item, 0) + amount
         cats.update_one({"_id": cat["_id"]}, {"$set": cat})
 
-        return await query.edit_message_text(
-            f"✅ *Purchase Successful!*\n"
-            f"🧾 {item.replace('_',' ').title()} × {amount}\n"
-            f"💰 Spent: ${cost}\n"
+        await query.edit_message_text(
+            f"✅ *Purchase Successful!*\n\n"
+            f"🧾 {item.replace('_',' ').title()} × 1\n"
+            f"💰 Spent: ${price}\n"
             f"💵 Balance: ${cat['coins']}",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("⬅ Back to Shop", callback_data="shop:back")]
+            ])
         )
 
-    # ---------- BACK TO SHOP ----------
-    elif query.data == "back_shop":
+    # ================= BACK TO SHOP =================
+    elif data == "shop:back":
         keyboard = [
-            [InlineKeyboardButton(f"🧾 {item.replace('_',' ').title()} — ${info['price']}", callback_data=f"view:{item}")]
-            for item, info in SHOP_ITEMS.items()
+            [InlineKeyboardButton(f"{item.replace('_',' ').title()}", callback_data=f"shop:view:{item}")]
+            for item in SHOP_ITEMS
         ]
 
-        return await query.edit_message_text(
-            "🛒 *Catverse Black Market*\nChoose an item to see details:",
+        await query.edit_message_text(
+            "🛒 *Catverse Black Market*",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -385,17 +359,15 @@ async def inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = "🎒 *Your Inventory*\n\n"
 
-    items_found = False
-    for item, amt in inv.items():
-        if amt > 0:
-            items_found = True
-            msg += f"▫️ {item.replace('_',' ').title()} × {amt}\n"
+    items = [f"▫️ {k.replace('_',' ').title()} × {v}" for k, v in inv.items() if v > 0]
 
-    if not items_found:
+    if items:
+        msg += "\n".join(items)
+    else:
         msg += "Empty 😿"
 
     await update.message.reply_text(msg, parse_mode="Markdown")
-
+    
 # ================= ROB =================
 # ================= ROB =================
 async def rob(update: Update, context: ContextTypes.DEFAULT_TYPE):
