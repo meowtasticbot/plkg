@@ -3,6 +3,7 @@ import random
 import time
 from datetime import datetime, timedelta, timezone
 from pymongo import MongoClient
+from telegram.constants import ParseMode
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     ApplicationBuilder,
@@ -22,6 +23,7 @@ client = MongoClient(MONGO_URI)
 db = client["catverse"]
 cats = db["cats"]
 global_state = db["global"]
+leaderboard_history = db["leaderboard_history"]
 
 # ================= LEVELS =================
 
@@ -604,21 +606,109 @@ async def protect(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("🛡 Protection enabled for 1 day.")
     
-# ================= LEADERBOARDS =================
+# ================= BUTTONS =================
+def leaderboard_buttons():
+    keyboard = [[
+        InlineKeyboardButton("🏆 Richest Cats", callback_data="lb_rich"),
+        InlineKeyboardButton("⚔️ Top Fighters", callback_data="lb_kill"),
+    ]]
+    return InlineKeyboardMarkup(keyboard)
 
-async def toprich(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ================= RANK BADGES =================
+def rank_decor(rank: int) -> str:
+    return ["👑", "🥈", "🥉"][rank-1] if rank <= 3 else "🎖"
+
+# ================= RANK MOVEMENT =================
+def get_rank_arrow(user_id: int, board_type: str, new_rank: int) -> str:
+    key = f"{board_type}_{user_id}"
+    prev = leaderboard_history.find_one({"_id": key})
+
+    if not prev:
+        leaderboard_history.insert_one({"_id": key, "rank": new_rank})
+        return "🆕"
+
+    old_rank = prev["rank"]
+    leaderboard_history.update_one({"_id": key}, {"$set": {"rank": new_rank}})
+
+    if new_rank < old_rank:
+        return "🔼"
+    elif new_rank > old_rank:
+        return "🔽"
+    return "➖"
+
+# ================= BUILD RICH BOARD =================
+def build_rich_board():
     top = cats.find().sort("coins", -1).limit(10)
-    msg = "🏆 Top Rich Cats\n\n"
+    msg = "<b>🏆 Top Rich Cats</b>\n\n"
+
     for i, c in enumerate(top, 1):
-        msg += f"{i}. {c['name']} — ${c['coins']}\n"
-    await update.message.reply_text(msg)
+        user_id = c["_id"]
+        name = c.get("name", "Cat")
+        coins = c.get("coins", 0)
+
+        badge = rank_decor(i)
+        arrow = get_rank_arrow(user_id, "rich", i)
+        mention = f"<a href='tg://user?id={user_id}'>{name}</a>"
+
+        msg += f"{badge} {i}. {mention} {arrow} — ${coins}\n"
+
+    return msg
+
+# ================= BUILD KILL BOARD =================
+def build_kill_board():
+    top = cats.find().sort("kills", -1).limit(10)
+    msg = "<b>⚔️ Top Fighters</b>\n\n"
+
+    for i, c in enumerate(top, 1):
+        user_id = c["_id"]
+        name = c.get("name", "Cat")
+        kills = c.get("kills", 0)
+
+        badge = rank_decor(i)
+        arrow = get_rank_arrow(user_id, "kill", i)
+        mention = f"<a href='tg://user?id={user_id}'>{name}</a>"
+
+        msg += f"{badge} {i}. {mention} {arrow} — {kills} wins\n"
+
+    return msg
+
+# ================= COMMANDS =================
+async def toprich(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = build_rich_board()
+    await update.message.reply_text(
+        msg,
+        parse_mode=ParseMode.HTML,
+        reply_markup=leaderboard_buttons()
+    )
 
 async def topkill(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    top = cats.find().sort("kills", -1).limit(10)
-    msg = "⚔️ Top Fighters\n\n"
-    for i, c in enumerate(top, 1):
-        msg += f"{i}. {c['name']} — {c['kills']} wins\n"
-    await update.message.reply_text(msg)
+    msg = build_kill_board()
+    await update.message.reply_text(
+        msg,
+        parse_mode=ParseMode.HTML,
+        reply_markup=leaderboard_buttons()
+    )
+
+# ================= BUTTON SWITCH =================
+async def leaderboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "lb_rich":
+        msg = build_rich_board()
+    else:
+        msg = build_kill_board()
+
+    await query.edit_message_text(
+        msg,
+        parse_mode=ParseMode.HTML,
+        reply_markup=leaderboard_buttons()
+    )
+
+# ================= HANDLERS REGISTER =================
+app.add_handler(CommandHandler("toprich", toprich))
+app.add_handler(CommandHandler("topkill", topkill))
+app.add_handler(CallbackQueryHandler(leaderboard_callback, pattern="^lb_"))
 
 # ================= PROFILE =================
 async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
