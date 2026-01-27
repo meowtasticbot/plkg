@@ -392,9 +392,7 @@ async def inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 # ================= ROB =================
-    
-# (logic same, VIP Shield + Shield Breaker added)
-
+# ================= ROB =================
 async def rob(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == "private":
         return await update.message.reply_text("❌ Rob works in groups only.")
@@ -406,38 +404,59 @@ async def rob(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         return await update.message.reply_text("💸 Use like: /rob <amount>")
 
-    thief = get_cat(update.effective_user)
+    if amount < 1 or amount > 1000:
+        return await update.message.reply_text("❗ You can only rob between 1 - 1000.")
+
+    thief_user = update.effective_user
     victim_user = update.message.reply_to_message.from_user
 
-    if victim_user.id == update.effective_user.id:
+    if victim_user.id == thief_user.id:
         return await update.message.reply_text("🙀 You can't rob yourself!")
 
     if victim_user.is_bot:
         return await update.message.reply_text("🤖 That's a bot!")
 
+    thief = get_cat(thief_user)
     victim = get_cat(victim_user)
 
-    # 👑 VIP SHIELD CHECK (Auto protection)
+    # Clickable mentions
+    thief_mention = f"<a href='tg://user?id={thief_user.id}'>{thief_user.first_name}</a>"
+    victim_mention = f"<a href='tg://user?id={victim_user.id}'>{victim_user.first_name}</a>"
+
+    # 👑 VIP SHIELD CHECK
     if victim["inventory"].get("vip_shield", 0) > 0:
         victim["inventory"]["vip_shield"] -= 1
         cats.update_one({"_id": victim["_id"]}, {"$set": victim})
         return await update.message.reply_text(
-            f"👑 VIP SHIELD activated! {victim_user.first_name} blocked the robbery!"
+            f"👑 VIP SHIELD activated! {victim_mention} blocked the robbery!",
+            parse_mode="HTML"
         )
 
     # 🛡 NORMAL PROTECTION CHECK
     if is_protected(victim) or victim["inventory"].get("shield", 0) > 0:
-        # 💣 Check if thief has shield breaker
         if thief["inventory"].get("shield_breaker", 0) > 0:
             thief["inventory"]["shield_breaker"] -= 1
             cats.update_one({"_id": thief["_id"]}, {"$set": thief})
             await update.message.reply_text("💣 Shield Breaker used! Protection destroyed!")
         else:
-            return await update.message.reply_text("🛡 This cat is protected by a magic shield!")
+            return await update.message.reply_text(
+                f"🛡 {victim_mention} is protected by a magic shield!",
+                parse_mode="HTML"
+            )
 
     steal = min(amount, victim["coins"])
+
     if steal <= 0:
-        return await update.message.reply_text("😿 That cat is broke!")
+        return await update.message.reply_text(
+            f"😿 {victim_mention} is broke! Has $0",
+            parse_mode="HTML"
+        )
+
+    if steal < amount:
+        await update.message.reply_text(
+            f"⚠️ {victim_mention} has only ${victim['coins']}! You stole ${steal} instead.",
+            parse_mode="HTML"
+        )
 
     victim["coins"] -= steal
     thief["coins"] += steal
@@ -445,17 +464,38 @@ async def rob(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cats.update_one({"_id": thief["_id"]}, {"$set": thief})
     cats.update_one({"_id": victim["_id"]}, {"$set": victim})
 
-    await update.message.reply_text(f"😼 Robbery success! Stole ${steal}")
+    # ✅ Group success message with mentions
+    await update.message.reply_text(
+        f"😼 {thief_mention} robbed {victim_mention} and stole ${steal}!",
+        parse_mode="HTML"
+    )
+
+    # 📩 DM to victim
+    try:
+        await context.bot.send_message(
+            chat_id=victim_user.id,
+            text=f"🚨 You were robbed by {thief_mention}!\n💸 Lost: ${steal}",
+            parse_mode="HTML"
+        )
+    except:
+        pass  # user may have DMs closed
 
 # ================= KILL =================
-
 async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.reply_to_message:
         return await update.message.reply_text("Reply to attack someone.")
 
-    attacker = get_cat(update.effective_user)
-    victim = get_cat(update.message.reply_to_message.from_user)
+    attacker_user = update.effective_user
+    victim_user = update.message.reply_to_message.from_user
 
+    attacker = get_cat(attacker_user)
+    victim = get_cat(victim_user)
+
+    # Clickable mentions
+    attacker_mention = f"<a href='tg://user?id={attacker_user.id}'>{attacker_user.first_name}</a>"
+    victim_mention = f"<a href='tg://user?id={victim_user.id}'>{victim_user.first_name}</a>"
+
+    # Reward
     reward = random.randint(80, 160)
     attacker["kills"] += 1
     victim["deaths"] += 1
@@ -464,8 +504,21 @@ async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cats.update_one({"_id": attacker["_id"]}, {"$set": attacker})
     cats.update_one({"_id": victim["_id"]}, {"$set": victim})
 
-    await update.message.reply_text(f"⚔️ Victory! +${reward}")
+    # ✅ Group message
+    await update.message.reply_text(
+        f"⚔️ {attacker_mention} attacked {victim_mention} and won!\n💰 Reward: ${reward}",
+        parse_mode="HTML"
+    )
 
+    # 📩 DM to victim
+    try:
+        await context.bot.send_message(
+            chat_id=victim_user.id,
+            text=f"🚨 You were attacked by {attacker_mention}!\n💀 You lost the fight!",
+            parse_mode="HTML"
+        )
+    except:
+        pass  # user may have DMs closed
 # ================= PROTECTION COMMAND =================
 
 async def protect(update: Update, context: ContextTypes.DEFAULT_TYPE):
