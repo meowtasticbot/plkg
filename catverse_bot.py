@@ -418,17 +418,27 @@ async def gift(update: Update, context: ContextTypes.DEFAULT_TYPE):
     receiver_user = update.message.reply_to_message.from_user
     receiver = get_cat(receiver_user)
 
+    # Deduct from sender
     sender["inventory"][item] -= 1
     if sender["inventory"][item] <= 0:
         del sender["inventory"][item]
 
+    # Add to receiver
     receiver.setdefault("inventory", {})
     receiver["inventory"][item] = receiver["inventory"].get(item, 0) + 1
 
+    # Update DB
     cats.update_one({"_id": sender["_id"]}, {"$set": {"inventory": sender["inventory"]}})
     cats.update_one({"_id": receiver["_id"]}, {"$set": {"inventory": receiver["inventory"]}})
 
-    await update.message.reply_text(f"{GIFT_ITEMS[item]['emoji']} Gift sent to {receiver_user.first_name} 💖")
+    # Prepare reply
+    if item == "kiss":
+        # Clickable user link
+        user_link = f"[{receiver_user.first_name}](tg://user?id={receiver_user.id})"
+        text = f"{GIFT_ITEMS[item]['emoji']} Gift sent to {user_link} 💖"
+        await update.message.reply_text(text, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(f"{GIFT_ITEMS[item]['emoji']} Gift sent to {receiver_user.first_name} 💖")
         
 # ================= INVENTORY =================
 async def inventory(update: Update, context: ContextTypes.DEFAULT_TYPE):
