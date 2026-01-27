@@ -586,19 +586,24 @@ async def topkill(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg)
 
 # ================= PROFILE =================
-
 async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cat = get_cat(update.effective_user)
+    # Agar reply kiya ya user mention kiya
+    target_user = update.message.reply_to_message.from_user if update.message.reply_to_message else update.effective_user
+    cat = get_cat(target_user)
     d = cat["dna"]
     rank = calculate_global_rank(cat["_id"])
 
+    # Clickable name
+    mention = f"<a href='tg://user?id={target_user.id}'>{target_user.first_name}</a>"
+
     await update.message.reply_text(
-        f"🐾 {cat['level']}\n"
-        f"💰 Money: ${cat['coins']}\n"
-        f"🏆 Rank: #{rank}\n"
-        f"🐟 Fish: {cat['fish']}\n"
-        f"⚔️ Wins: {cat['kills']} | 💀 Deaths: {cat['deaths']}\n\n"
-        f"DNA → 😼 {d['aggression']} | 🧠 {d['intelligence']} | 🍀 {d['luck']} | 💖 {d['charm']}"
+        f"🐾 {mention} — <b>Level:</b> {cat['level']}\n"
+        f"<b>Money:</b> ${cat['coins']}\n"
+        f"<b>Rank:</b> #{rank}\n"
+        f"<b>Fish:</b> {cat['fish']}\n"
+        f"<b>Wins:</b> {cat['kills']} | <b>Deaths:</b> {cat['deaths']}\n\n"
+        f"<b>DNA →</b> 😼 {d['aggression']} | 🧠 {d['intelligence']} | 🍀 {d['luck']} | 💖 {d['charm']}",
+        parse_mode="HTML"
     )
 
 # ================= FUN COMMAND =================
