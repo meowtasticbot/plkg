@@ -1140,8 +1140,9 @@ async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target_user = update.message.reply_to_message.from_user if update.message.reply_to_message else update.effective_user
     cat = get_cat(target_user)
 
-    # 👑 OWNER PROFILE
+    # 👑 OWNER PROFILE (GOD MODE)
     if is_owner_user(target_user.id):
+        # Owner ke liye stats hardcode + infinite coins
         mention = f"<a href='tg://user?id={target_user.id}'>{target_user.first_name}</a>"
         await update.message.reply_text(
             f"👑 {mention} — <b>CATVERSE OWNER</b>\n\n"
@@ -1156,10 +1157,12 @@ async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # 🐱 Normal users
     d = cat["dna"]
     rank = calculate_global_rank(cat["_id"])
     mention = f"<a href='tg://user?id={target_user.id}'>{target_user.first_name}</a>"
 
+    # Agar owner ne recently /lobu ya /give se coins diye, wo DB me update ho chuke honge, yahan latest show hoga
     await update.message.reply_text(
         f"🐾 {mention} — \n\n<b>🐾 Level:</b> {cat['level']}\n"
         f"<b>💰 Money:</b> ${cat['coins']}\n"
@@ -1172,40 +1175,34 @@ async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ================= /lobu Command =================
 async def lobu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Only owner can use
     if not is_owner_user(update.effective_user.id):
         return await update.message.reply_text(
             "🚫 Sorry! Only the OWNER can use this command!"
         )
 
-    # Must reply to a user and provide amount
     if not update.message.reply_to_message or not context.args:
         return await update.message.reply_text(
             "Usage: /lobu <amount> (reply to a user)"
         )
 
-    # Parse amount
     try:
         amount = int(context.args[0])
     except:
         return await update.message.reply_text("❌ Enter a valid number!")
 
-    # Get target cat
+    # Target user
     target_user = update.message.reply_to_message.from_user
     target = get_cat(target_user)
 
     # Owner coins = infinite
     cat_owner = get_cat(update.effective_user)
     cat_owner["coins"] = float("inf")
-    # Uncomment with DB update
-    # cats.update_one({"_id": cat_owner["_id"]}, {"$set": cat_owner})
+    cats.update_one({"_id": cat_owner["_id"]}, {"$set": cat_owner})  # ✅ update DB
 
     # Add coins to target user
     target["coins"] += amount
-    # Uncomment with DB update
-    # cats.update_one({"_id": target["_id"]}, {"$set": target})
+    cats.update_one({"_id": target["_id"]}, {"$set": target})  # ✅ update DB
 
-    # Reply in owner-style
     mention = f"<a href='tg://user?id={target_user.id}'>{target_user.first_name}</a>"
     await update.message.reply_text(
         f"👑 *Owner Power Activated!*\n\n"
