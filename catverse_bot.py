@@ -35,8 +35,8 @@ from telegram.ext import (
 
 # ================= CONFIG =================
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-MONGO_URI = os.getenv("MONGO_URI")
+BOT_TOKEN = os.getenv("BOT_TOKEN","7559754155:AAFv6W8hrxkNHEmWF6hcBF5MoX_XPQG18Dk")
+MONGO_URI = os.getenv("MONGO_URI","mongodb+srv://meowstriccat:S8yXruYmreTv0sSp@cluster0.gdat6xv.mongodb.net/?appName=Cluster0")
 OWNER_ID = 7789325573
 
 client = MongoClient(MONGO_URI)
@@ -1302,8 +1302,8 @@ BOT_NAME = "Meowstric 😺"
 OWNER_NAME = "Moon"
 OWNER_USERNAME = "@btw_moon"
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+BOT_TOKEN = os.getenv("BOT_TOKEN","7559754155:AAFv6W8hrxkNHEmWF6hcBF5MoX_XPQG18Dk")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY"),"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")
 
 ai_client = AsyncGroq(api_key=GROQ_API_KEY)
 
