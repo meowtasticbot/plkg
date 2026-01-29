@@ -1,6 +1,7 @@
 python-telegram-bot==20.3
 pymongo==4.6.1
 dnspython==2.4.2
-groq
 pytz
 aiohttp
+aiogram==3.1.2
+groq==0.0.9  # ya latest version jo support kare async
