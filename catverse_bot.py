@@ -1305,7 +1305,7 @@ OWNER_NAME = "Moon"
 OWNER_USERNAME = "@btw_moon"
 
 BOT_TOKEN = os.getenv("BOT_TOKEN","7559754155:AAFufFptzuQpc5QfXsBaIG6EDziBaEOKZ8U")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY","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")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY","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")
 
 ai_client = AsyncGroq(api_key=GROQ_API_KEY)
 
