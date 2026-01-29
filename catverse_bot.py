@@ -2449,7 +2449,7 @@ async def main():
     app.add_handler(CommandHandler("fun", fun))
     app.add_handler(CommandHandler("upgrade", upgrade))
     app.add_handler(CommandHandler("fishlb", fishlb))
-    app.add_handler(ChatMemberHandler(welcome, ChatMemberHandler.CHAT_MEMBER))
+    
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_chat))
 
     print("🐱 CATVERSE FULLY UPGRADED & RUNNING...")
