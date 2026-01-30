@@ -17,11 +17,9 @@ from pymongo import MongoClient
 
 # ================= TELEGRAM =================
 from telegram import (
-    Update,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton
+    Update, InlineKeyboardMarkup, InlineKeyboardButton, Chat, ChatPermissions
 )
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ChatMemberStatus
 
 from telegram.ext import (
     ApplicationBuilder,
@@ -1299,212 +1297,411 @@ async def upgrade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ================= CONFIG =================
-
 BOT_NAME = "Meowstric 😺"
 OWNER_NAME = "Moon"
 OWNER_USERNAME = "@btw_moon"
+# Direct tokens
+TOKEN = "7559754155:AAFufFptzuQpc5QfXsBaIG6EDziBaEOKZ8U"
+GROQ_API_KEY = "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"
 
-BOT_TOKEN = os.getenv(
-    "BOT_TOKEN",
-    "7559754155:AAFufFptzuQpc5QfXsBaIG6EDziBaEOKZ8U"
-)
-GROQ_API_KEY = os.getenv(
-    "GROQ_API_KEY",
-    "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"
-)
+# Initialize Groq client
+client = AsyncGroq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-ai_client = AsyncGroq(api_key=GROQ_API_KEY)
+# ================= STORAGE & MEMORY =================
+chat_memory = {}  # chat_id: deque
+user_emotions = {}
+user_last_interaction = {}
+dm_enabled_users = {}
+game_sessions = {}
 
-# ================= STATE =================
+# ================= TIMEZONE =================
+INDIAN_TIMEZONE = pytz.timezone('Asia/Kolkata')
 
-chat_memory = {}
-user_moods = {}
 
-HELLO_WORDS = ["hi", "hello", "hey", "hii", "namaste"]
-GREET_WORDS = ["good morning", "gm", "good evening", "good night", "gn"]
+def get_indian_time():
+    return datetime.now(pytz.utc).astimezone(INDIAN_TIMEZONE)
 
-RARE_REACTIONS = ["😼", "😂", "👀"]
 
-WELCOME_MESSAGES = [
-    "Arre welcome {name} 😺\nAaram se baitho, baat hoti rahegi 🐾",
-    "Heyy {name}! 👋\nChill jagah hai, tension mat lo 😼",
-    "Meoww {name} 😺\nBas vibe match honi chahiye 🐾",
-    "Welcome welcome {name} 🎉\nYaha thoda fun, thoda chaos 😹",
-]
+# ================= EMOTIONS =================
+EMOTIONAL_RESPONSES = {
+    "happy": ["😊", "🎉", "🥳", "🌟", "✨", "👍"],
+    "angry": ["😠", "👿", "💢", "🤬", "🔥"],
+    "crying": ["😢", "😭", "💔", "🥺"],
+    "love": ["❤️", "💖", "💕", "🥰"],
+    "funny": ["😂", "🤣", "😆"],
+    "thinking": ["🤔", "💭", "🧠"],
+}
 
-# 👀 Soft abusive words (block nahi, sirf tone down)
-ABUSIVE_WORDS = [
-    "bc", "mc", "chutiya", "gandu", "madarchod",
-    "bhosdike", "lund", "fuck", "shit"
-]
+QUICK_RESPONSES = {
+    "greeting": ["Heyy! Kaise ho? 😺", "Namaste! 🌟", "Hello hello! 🫂"],
+    "goodbye": ["Bye! Jaldi baat karte hain 👋", "Alvida! 💫"],
+    "thanks": ["Welcome! 😄", "No problem! 😇"],
+    "sorry": ["Arre sorry yaar! 😢", "Oops! My bad! 😅"]
+}
 
-SOFT_WARNINGS = [
-    "Arre aaram se 😼",
-    "Thoda pyaar se bol na 🐾",
-    "Gussa lag raha, par shaant ho ja 😺",
-    "Baat karte hain, ladte nahi 👀"
-]
+ABUSIVE_WORDS = ["bc", "mc", "chutiya", "gandu", "madarchod", "bhosdike", "lund", "fuck", "shit"]
+SOFT_WARNINGS = ["Arre aaram se 😼", "Thoda pyaar se bol na 🐾", "Gussa lag raha, par shaant ho ja 😺"]
+
+WORD_STARTS = ["PYTHON", "APPLE", "TIGER", "ELEPHANT", "RAINBOW"]
+
+# ================= WEATHER DATA =================
+WEATHER_DATA = {
+    "mumbai": {"temp": "32°C", "condition": "Sunny ☀️", "humidity": "65%"},
+    "delhi": {"temp": "28°C", "condition": "Partly Cloudy ⛅", "humidity": "55%"},
+    "bangalore": {"temp": "26°C", "condition": "Light Rain 🌦️", "humidity": "70%"},
+    "kolkata": {"temp": "30°C", "condition": "Humid 💦", "humidity": "75%"},
+    "chennai": {"temp": "33°C", "condition": "Hot 🔥", "humidity": "68%"},
+}
 
 # ================= HELPERS =================
+def get_emotion(emotion_type: str = None, user_id: int = None):
+    if user_id and user_id in user_emotions:
+        emotion_type = user_emotions[user_id]
+    if emotion_type in EMOTIONAL_RESPONSES:
+        return random.choice(EMOTIONAL_RESPONSES[emotion_type])
+    return random.choice(random.choice(list(EMOTIONAL_RESPONSES.values())))
 
-def get_india_time():
-    return datetime.now(pytz.timezone("Asia/Kolkata"))
 
-async def human_typing(chat_id, context):
-    await context.bot.send_chat_action(
-        chat_id=chat_id,
-        action=ChatAction.TYPING
-    )
-    await asyncio.sleep(random.uniform(0.8, 1.6))
+def update_user_emotion(user_id: int, message: str):
+    message_lower = message.lower()
+    if any(w in message_lower for w in ['love', 'pyaar', 'dil']):
+        user_emotions[user_id] = "love"
+    elif any(w in message_lower for w in ['angry', 'gussa', 'naraz']):
+        user_emotions[user_id] = "angry"
+    elif any(w in message_lower for w in ['cry', 'sad', 'dukh']):
+        user_emotions[user_id] = "crying"
+    elif any(w in message_lower for w in ['funny', 'lol', 'joke']):
+        user_emotions[user_id] = "funny"
+    elif any(w in message_lower for w in ['hi', 'hello', 'hey']):
+        user_emotions[user_id] = "happy"
+    else:
+        user_emotions[user_id] = "thinking"
+    user_last_interaction[user_id] = datetime.now()
 
-def remember(chat_id, text):
-    chat_memory.setdefault(chat_id, deque(maxlen=10)).append(text)
-
-def detect_mood(text: str):
-    t = text.lower()
-    if any(w in t for w in ["sad", "dukhi", "rona", "alone", "miss", "akela"]):
-        return "sad"
-    if any(w in t for w in ["gussa", "angry", "irritate", "pagal"]):
-        return "angry"
-    if any(w in t for w in ["lol", "haha", "😂", "🤣"]):
-        return "funny"
-    if any(w in t for w in ["happy", "khush", "excited", "mast"]):
-        return "happy"
-    return "neutral"
 
 def contains_abuse(text: str):
     t = text.lower()
     return any(re.search(rf"\b{w}\b", t) for w in ABUSIVE_WORDS)
 
-def maybe_use_name(user):
-    return f"{user.first_name}, " if random.random() < 0.35 else ""
 
-# ================= START =================
+# ================= WORD CHAIN GAME =================
+def start_word_game(user_id: int):
+    start_word = random.choice(WORD_STARTS)
+    game_sessions[user_id] = {
+        "last_word": start_word.lower(),
+        "last_letter": start_word[-1].lower(),
+        "score": 0,
+        "words_used": [start_word.lower()],
+    }
+    return start_word
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "😺 Meow!\n"
-        "DM me ya group me tag karo, baat ho jayegi 🐾"
+
+def check_word_game(user_id: int, user_word: str):
+    if user_id not in game_sessions:
+        return False, "No active game! Use /wordgame."
+    game = game_sessions[user_id]
+    word = user_word.lower().strip()
+    if not word.startswith(game["last_letter"]):
+        return False, f"Word must start with '{game['last_letter'].upper()}'"
+    if word in game["words_used"]:
+        return False, f"'{user_word}' already used!"
+    if len(word) < 3:
+        return False, "Word must be at least 3 letters!"
+    game["words_used"].append(word)
+    game["last_word"] = word
+    game["last_letter"] = word[-1]
+    game["score"] += 10
+    return True, game
+
+
+# ================= TIME & WEATHER =================
+def get_time_info():
+    indian_time = get_indian_time()
+    time_str = indian_time.strftime("%I:%M %p")
+    date_str = indian_time.strftime("%A, %d %B %Y")
+    hour = indian_time.hour
+    if 5 <= hour < 12:
+        greeting = "Good Morning! 🌅"
+    elif 12 <= hour < 17:
+        greeting = "Good Afternoon! ☀️"
+    elif 17 <= hour < 21:
+        greeting = "Good Evening! 🌇"
+    else:
+        greeting = "Good Night! 🌙"
+    return (
+        f"🕒 IST: {time_str}\n"
+        f"📅 Date: {date_str}\n"
+        f"💬 {greeting}\n"
+        f"*Timezone: Asia/Kolkata*"
     )
 
-# ================= MAIN CHAT =================
 
-async def on_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text:
-        return
+async def get_weather_info(city: str = None):
+    if not city:
+        city = random.choice(list(WEATHER_DATA.keys()))
+    city_lower = city.lower()
+    for city_key in WEATHER_DATA:
+        if city_key in city_lower or city_lower in city_key:
+            weather = WEATHER_DATA[city_key]
+            return (
+                f"🌤️ Weather in {city_key.title()}:\n"
+                f"• Temp: {weather['temp']}\n"
+                f"• Condition: {weather['condition']}\n"
+                f"• Humidity: {weather['humidity']}"
+            )
+    random_city = random.choice(list(WEATHER_DATA.keys()))
+    weather = WEATHER_DATA[random_city]
+    return (
+        f"🌤️ Weather info:\nCouldn't find '{city}'. Showing {random_city.title()}:\n"
+        f"• Temp: {weather['temp']}\n"
+        f"• Condition: {weather['condition']}\n"
+        f"• Humidity: {weather['humidity']}"
+    )
 
-    msg = update.message
-    chat = update.effective_chat
-    user = update.effective_user
-    text = msg.text.strip()
-    text_l = text.lower()
 
-    if text.startswith("/"):
-        return
-
-    # ============ GROUP LOGIC ============
-    if chat.type in ("group", "supergroup"):
-        bot_username = context.bot.username.lower()
-        mentioned = f"@{bot_username}" in text_l
-        random_reply = random.random() < 0.08
-
-        if not mentioned and not random_reply:
-            return
-
-        text = text.replace(f"@{bot_username}", "").strip()
-        text_l = text.lower()
-
-    # ============ SOFT ABUSE FILTER ============
-    if contains_abuse(text):
-        await human_typing(chat.id, context)
-        await msg.reply_text(random.choice(SOFT_WARNINGS))
-        return
-
-    # ============ RARE REACTION ============
-    if random.random() < 0.01:
-        await msg.reply_text(random.choice(RARE_REACTIONS))
-        return
-
-    # ============ BASIC ============
-    if any(k in text_l for k in ["tum kaun", "who are you", "naam"]):
-        await human_typing(chat.id, context)
-        await msg.reply_text(
-            "Main Meowstric hoon 😺\n"
-            "Bot hoon, par vibe real hai."
+# ================= AI LOGIC WITH GROQ =================
+async def get_ai_response(chat_id: int, user_text: str, user_id: int = None) -> str:
+    # Initialize chat memory
+    if chat_id not in chat_memory:
+        chat_memory[chat_id] = deque(maxlen=20)
+    chat_memory[chat_id].append({"role": "user", "content": user_text})
+    
+    if user_id:
+        update_user_emotion(user_id, user_text)
+    
+    user_text_lower = user_text.lower()
+    
+    # Quick responses
+    if any(word in user_text_lower for word in ['hi', 'hello', 'hey', 'namaste', 'hola']):
+        if random.random() < 0.4:
+            return f"{get_emotion('happy', user_id)} {random.choice(QUICK_RESPONSES['greeting'])}"
+    if any(word in user_text_lower for word in ['bye', 'goodbye', 'tata', 'alvida', 'see you']):
+        if random.random() < 0.4:
+            return f"{get_emotion()} {random.choice(QUICK_RESPONSES['goodbye'])}"
+    if any(word in user_text_lower for word in ['thanks', 'thank you', 'dhanyavad', 'shukriya']):
+        if random.random() < 0.4:
+            return f"{get_emotion('love', user_id)} {random.choice(QUICK_RESPONSES['thanks'])}"
+    if any(word in user_text_lower for word in ['sorry', 'maaf', 'apology']):
+        if random.random() < 0.4:
+            return f"{get_emotion('crying', user_id)} {random.choice(QUICK_RESPONSES['sorry'])}"
+    
+    # Prepare system prompt
+    indian_time = get_indian_time()
+    current_hour = indian_time.hour
+    
+    if user_id and user_id in user_emotions and user_emotions[user_id] == "angry":
+        system_prompt = (
+            f"You are a Hinglish chatbot. User seems angry. "
+            f"Try to calm them down. Be extra polite and understanding. "
+            f"Use soothing tone. Current Indian time: {indian_time.strftime('%I:%M %p')}. "
+            f"Show you care. Use emojis like {get_emotion('crying')} or {get_emotion('love')}."
         )
-        return
-
-    if "time" in text_l:
-        now = get_india_time()
-        await human_typing(chat.id, context)
-        await msg.reply_text(
-            f"Abhi {now.strftime('%I:%M %p')} ho raha 🇮🇳"
+    elif user_id and user_id in user_emotions and user_emotions[user_id] == "crying":
+        system_prompt = (
+            f"You are a Hinglish chatbot. User seems sad or crying. "
+            f"Comfort them. Be empathetic and kind. "
+            f"Offer emotional support. Use comforting emojis. "
+            f"Current mood: sympathetic and caring."
         )
-        return
-
-    # ============ MOOD ============
-    mood = detect_mood(text)
-    user_moods[user.id] = mood
-
-    remember(chat.id, f"{user.first_name}: {text}")
-    memory_text = "\n".join(chat_memory.get(chat.id, []))
-
-    # ============ MOOD BASE PROMPT ============
-    mood_instruction = {
-        "sad": "User thoda down hai. Soft, caring, warm tone use karo.",
-        "angry": "User gusse me hai. Calm karo, validate karo, fight nahi.",
-        "happy": "User happy hai. Light masti aur friendly tone.",
-        "funny": "User joke mode me hai. Thoda witty reply.",
-        "neutral": "Normal casual WhatsApp style."
-    }.get(mood, "Casual tone.")
-
-    system_prompt = f"""
-You are Meowstric 😺.
-You talk like a real Indian human chatting casually.
-
-Style rules:
-• Hinglish
-• 1–2 short lines
-• Natural, imperfect
-• No gyaan, no lectures
-• Emojis kabhi-kabhi
-
-Mood rule:
-{mood_instruction}
-"""
-
+    else:
+        if 5 <= current_hour < 12:
+            time_greeting = "Good morning! 🌅"
+        elif 12 <= current_hour < 17:
+            time_greeting = "Good afternoon! ☀️"
+        elif 17 <= current_hour < 21:
+            time_greeting = "Good evening! 🌇"
+        else:
+            time_greeting = "Good night! 🌙"
+        
+        system_prompt = (
+            f"You are a Hinglish (Hindi+English mix) chatbot. {time_greeting} "
+            f"Your personality: Emotional, funny, sometimes angry, sometimes crying, mostly happy. "
+            f"Use LOTS of emojis in every response (at least 2-3). "
+            f"Keep replies SHORT (2-3 lines max). Be authentic like a human friend. "
+            f"Show emotions naturally. If user asks something complex, give simple answer. "
+            f"Current Indian time: {indian_time.strftime('%I:%M %p')}. "
+            f"Date: {indian_time.strftime('%d %B %Y')}. "
+            f"Be conversational and engaging. Add humor when appropriate."
+        )
+    
+    # Prepare messages for Groq
+    messages = [{"role": "system", "content": system_prompt}]
+    for msg in list(chat_memory[chat_id])[-5:]:
+        messages.append(msg)
+    
+    # Call Groq API
     try:
-        await human_typing(chat.id, context)
-
-        res = await ai_client.chat.completions.create(
+        if not client:
+            return f"{get_emotion('thinking')} AI service unavailable. Please try later!"
+        
+        completion = await client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"{memory_text}\nUser: {text}"}
-            ],
+            messages=messages,
             temperature=0.9,
-            max_tokens=80
+            max_tokens=120,
+            top_p=0.9
         )
+        
+        ai_reply = completion.choices[0].message.content
+        ai_reply = f"{get_emotion(None, user_id)} {ai_reply}"
+        
+        if len(ai_reply) > 300:
+            ai_reply = ai_reply[:297] + "..."
+        
+        chat_memory[chat_id].append({"role": "assistant", "content": ai_reply})
+        return ai_reply
+    
+    except Exception as e:
+        fallback_responses = [
+            f"{get_emotion('crying')} Arre yaar, dimaag kaam nahi kar raha! Thoda ruk ke try karna?",
+            f"{get_emotion('thinking')} Hmm... yeh to mushkil ho gaya. Phir se poocho?",
+            f"{get_emotion('angry')} AI bhai mood off hai aaj! Baad me baat karte hain!",
+            f"{get_emotion()} Oops! Connection issue. Kuch aur poocho?"
+        ]
+        return random.choice(fallback_responses)
 
-        reply = res.choices[0].message.content.strip()
-        await msg.reply_text(maybe_use_name(user) + reply)
 
-    except Exception:
-        await msg.reply_text("Thoda sa busy ho gaya 😼 baad me bolte")
+# ================= BUTTONS =================
+def main_buttons():
+    keyboard = [
+        [InlineKeyboardButton("💬 DM Toggle", callback_data="toggle_dm")],
+        [InlineKeyboardButton("🎮 Games", callback_data="open_games")],
+        [InlineKeyboardButton("🔄 Update", callback_data="update_bot")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
-# ================= WELCOME =================
 
-async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.chat_member.new_chat_member.user
-    name = f"<a href='tg://user?id={user.id}'>{user.first_name}</a>"
+def help_buttons():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎮 Games", callback_data="help_games"),
+         InlineKeyboardButton("🛡️ Admin", callback_data="help_admin")],
+        [InlineKeyboardButton("😊 Fun", callback_data="help_fun"),
+         InlineKeyboardButton("🌤️ Weather/Time", callback_data="help_weather")]
+    ])
 
-    text = random.choice(WELCOME_MESSAGES).format(name=name)
 
-    await context.bot.send_message(
-        update.chat_member.chat.id,
-        text,
-        parse_mode="HTML"
+# ================= HANDLERS =================
+async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        f"😺 Hello {update.effective_user.first_name}! Welcome to Meowstric Bot 🐾",
+        reply_markup=main_buttons()
     )
+
+
+async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    if update.effective_chat.type == Chat.PRIVATE and not dm_enabled_users.get(user_id, True):
+        return
+    reply = await get_ai_response(chat_id, update.message.text, user_id)
+    await update.message.reply_text(reply)
+
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = query.from_user.id
+    if query.data == "toggle_dm":
+        dm_enabled_users[user_id] = not dm_enabled_users.get(user_id, True)
+        status = "ON" if dm_enabled_users[user_id] else "OFF"
+        await query.message.edit_text(f"💬 DM Chat toggled {status}", reply_markup=main_buttons())
+    elif query.data == "open_games":
+        await query.message.edit_text("🎮 Games available: /wordgame", reply_markup=main_buttons())
+    elif query.data == "update_bot":
+        await query.message.edit_text("🔄 Bot is up-to-date! ✅", reply_markup=main_buttons())
+    await query.answer()
+
+
+async def wordgame_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    word = start_word_game(user_id)
+    await update.message.reply_text(f"🎮 Word Chain Game Started!\nStart with: {word}")
+
+
+async def cmd_clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    if chat_id in chat_memory:
+        chat_memory[chat_id].clear()
+    if user_id in game_sessions:
+        del game_sessions[user_id]
+    await update.message.reply_text(f"{get_emotion()} Memory cleared! ✨")
+
+
+async def cmd_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(get_time_info())
+
+
+async def cmd_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    t = get_indian_time()
+    await update.message.reply_text(f"📅 Date: {t.strftime('%A, %d %B %Y')}")
+
+
+async def cmd_weather(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    args = context.args
+    city = " ".join(args) if args else None
+    weather = await get_weather_info(city)
+    await update.message.reply_text(weather)
+
+
+# ================= WELCOME MEMBER =================
+async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    new_status = update.chat_member.new_chat_member.status
+    if new_status == ChatMemberStatus.MEMBER:
+        member = update.chat_member.new_chat_member.user
+        messages = [
+            f"🎉 Welcome {member.first_name}! Khush aamdeed! 😊",
+            f"🌟 Aao ji {member.first_name}! Group me welcome! 🫂",
+            f"✨ Hey {member.first_name}! Great to have you here! 💖"
+        ]
+        await context.bot.send_message(update.effective_chat.id, random.choice(messages))
+
+# ================= W MEMBER =================
+async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    message = update.message
+    user_text = message.text
+
+    # --- Get bot info ---
+    bot = context.bot
+    bot_username = (await bot.get_me()).username
+
+    # --- Determine if we should respond ---
+    is_mention = f"@{bot_username}" in user_text if bot_username else False
+    is_reply_to_bot = (
+        message.reply_to_message and 
+        message.reply_to_message.from_user.id == bot.id
+    )
+    should_respond = (
+        message.chat.type == "private" or
+        is_mention or
+        is_reply_to_bot
+    )
+
+    if not should_respond:
+        # 10-15% chance to randomly respond in groups even without mention/reply
+        if message.chat.type != "private" and random.random() < 0.12:
+            should_respond = True
+
+    if should_respond:
+        # Clean the text (remove bot mention)
+        clean_text = user_text
+        if bot_username and f"@{bot_username}" in clean_text:
+            clean_text = clean_text.replace(f"@{bot_username}", "").strip()
+
+        # Randomly ignore simple greetings sometimes in groups
+        greetings = ['hi', 'hello', 'hey', 'namaste', 'hola']
+        if message.chat.type != "private" and any(word in clean_text.lower() for word in greetings):
+            if random.random() < 0.5:  # 50% chance to ignore
+                return
+
+        # --- Show typing action ---
+        await bot.send_chat_action(chat_id, "typing")
+        await asyncio.sleep(random.uniform(0.5, 1.5))  # human-like delay
+
+        # --- Get AI response ---
+        response = await get_ai_response(chat_id, clean_text, user_id)
+        await message.reply(response)
     
 #  ================= MAIN =================
 
@@ -1536,8 +1733,15 @@ def main():
     app.add_handler(CommandHandler("fun", fun))
     app.add_handler(CommandHandler("upgrade", upgrade))
     app.add_handler(CommandHandler("fishlb", fishlb))
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(ChatMemberHandler(welcome, ChatMemberHandler.CHAT_MEMBER))
+    app.add_handler(CommandHandler("start", start_handler))
+    app.add_handler(CommandHandler("wordgame", wordgame_handler))
+    app.add_handler(CommandHandler("clear", cmd_clear))
+    app.add_handler(CommandHandler("time", cmd_time))
+    app.add_handler(CommandHandler("date", cmd_date))
+    app.add_handler(CommandHandler("weather", cmd_weather))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_handler))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(ChatMemberHandler(welcome_new_member, ChatMemberHandler.CHAT_MEMBER))
     
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_chat))
 
