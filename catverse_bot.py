@@ -1655,53 +1655,36 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
         ]
         await context.bot.send_message(update.effective_chat.id, random.choice(messages))
 
-# ================= W MEMBER =================
+# ================= CHAT HANDLER WITH MENTION & PRIVATE =================
 async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    chat_id = update.effective_chat.id
     message = update.message
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    bot = context.bot
     user_text = message.text
 
-    # --- Get bot info ---
-    bot = context.bot
+    # Check DM toggle
+    if message.chat.type == Chat.PRIVATE and not dm_enabled_users.get(user_id, True):
+        return
+
+    # Bot mention / reply logic
     bot_username = (await bot.get_me()).username
-
-    # --- Determine if we should respond ---
     is_mention = f"@{bot_username}" in user_text if bot_username else False
-    is_reply_to_bot = (
-        message.reply_to_message and 
-        message.reply_to_message.from_user.id == bot.id
-    )
-    should_respond = (
-        message.chat.type == "private" or
-        is_mention or
-        is_reply_to_bot
-    )
-
-    if not should_respond:
-        # 10-15% chance to randomly respond in groups even without mention/reply
-        if message.chat.type != "private" and random.random() < 0.12:
-            should_respond = True
+    is_reply_to_bot = message.reply_to_message and message.reply_to_message.from_user.id == bot.id
+    should_respond = message.chat.type == "private" or is_mention or is_reply_to_bot
 
     if should_respond:
-        # Clean the text (remove bot mention)
         clean_text = user_text
         if bot_username and f"@{bot_username}" in clean_text:
             clean_text = clean_text.replace(f"@{bot_username}", "").strip()
 
-        # Randomly ignore simple greetings sometimes in groups
-        greetings = ['hi', 'hello', 'hey', 'namaste', 'hola']
-        if message.chat.type != "private" and any(word in clean_text.lower() for word in greetings):
-            if random.random() < 0.5:  # 50% chance to ignore
-                return
-
-        # --- Show typing action ---
+        # Typing simulation
         await bot.send_chat_action(chat_id, "typing")
-        await asyncio.sleep(random.uniform(0.5, 1.5))  # human-like delay
+        await asyncio.sleep(random.uniform(0.5, 1.5))
 
-        # --- Get AI response ---
+        # AI reply
         response = await get_ai_response(chat_id, clean_text, user_id)
-        await message.reply(response)
+        await message.reply_text(response)
     
 #  ================= MAIN =================
 
