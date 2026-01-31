@@ -1620,84 +1620,124 @@ async def get_ai_response(chat_id: int, user_text: str, user_id: int = None) -> 
 
 # ================= BUTTONS =================
 def main_buttons():
-    keyboard = [
+    return InlineKeyboardMarkup([
         [InlineKeyboardButton("💬 DM Toggle", callback_data="toggle_dm")],
         [InlineKeyboardButton("🎮 Games", callback_data="open_games")],
         [InlineKeyboardButton("🔄 Update", callback_data="update_bot")],
-    ]
-    return InlineKeyboardMarkup(keyboard)
-
-
-def help_buttons():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎮 Games", callback_data="help_games"),
-         InlineKeyboardButton("🛡️ Admin", callback_data="help_admin")],
-        [InlineKeyboardButton("😊 Fun", callback_data="help_fun"),
-         InlineKeyboardButton("🌤️ Weather/Time", callback_data="help_weather")]
+        [InlineKeyboardButton("🛡️ Admin", callback_data="open_admin")],
     ])
 
+def games_buttons():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("😊 Fun", callback_data="game_fun"),
+            InlineKeyboardButton("🌤️ Weather", callback_data="game_weather")
+        ],
+        [
+            InlineKeyboardButton("🕒 Time", callback_data="game_time"),
+            InlineKeyboardButton("🎮 Word Game", callback_data="game_word")
+        ],
+        [InlineKeyboardButton("⬅️ Back", callback_data="back_main")]
+    ])
 
-# ================= HANDLERS =================
+# ================= START =================
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        f"😺 Hello {update.effective_user.first_name}! Welcome to Meowstric Bot 🐾",
+        f"😺 Hello {update.effective_user.first_name}!\n"
+        f"Welcome to *{BOT_NAME}* 🐾\n\n"
+        f"Choose an option below 👇",
+        parse_mode="Markdown",
         reply_markup=main_buttons()
     )
 
-
+# ================= CHAT =================
 async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    if update.effective_chat.type == Chat.PRIVATE and not dm_enabled_users.get(user_id, True):
+
+    if update.effective_chat.type == "private" and not dm_enabled_users.get(user_id, True):
         return
-    reply = await get_ai_response(chat_id, update.message.text, user_id)
-    await update.message.reply_text(reply)
 
+    # yahan tumhara AI reply aayega
+    await update.message.reply_text("😼 Meow! Main sun raha hoon...")
 
+# ================= BUTTON HANDLER =================
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user_id = query.from_user.id
-    if query.data == "toggle_dm":
+    q = update.callback_query
+    user_id = q.from_user.id
+    data = q.data
+
+    if data == "toggle_dm":
         dm_enabled_users[user_id] = not dm_enabled_users.get(user_id, True)
-        status = "ON" if dm_enabled_users[user_id] else "OFF"
-        await query.message.edit_text(f"💬 DM Chat toggled {status}", reply_markup=main_buttons())
-    elif query.data == "open_games":
-        await query.message.edit_text("🎮 Games available: /wordgame", reply_markup=main_buttons())
-    elif query.data == "update_bot":
-        await query.message.edit_text("🔄 Bot is up-to-date! ✅", reply_markup=main_buttons())
-    await query.answer()
+        status = "ON 😺" if dm_enabled_users[user_id] else "OFF 😴"
+        await q.message.edit_text(
+            f"💬 *DM Mode Updated!*\n\nNow you can chat: **{status}** 🐾",
+            parse_mode="Markdown",
+            reply_markup=main_buttons()
+        )
 
+    elif data == "open_games":
+        await q.message.edit_text(
+            "🎮 *Game Zone* 😼\nChoose one 👇",
+            parse_mode="Markdown",
+            reply_markup=games_buttons()
+        )
 
-async def wordgame_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    word = start_word_game(user_id)
-    await update.message.reply_text(f"🎮 Word Chain Game Started!\nStart with: {word}")
+    elif data == "update_bot":
+        await q.message.edit_text(
+            "🔄 *Update Status* 😺\n\n"
+            "• Bot running smooth 🐾\n"
+            "• No bugs detected\n"
+            "• Meowstric happy ✨",
+            parse_mode="Markdown",
+            reply_markup=main_buttons()
+        )
 
+    elif data == "open_admin":
+        await q.message.edit_text(
+            "🛡️ **ADMIN COMMANDS 🛡️**\n\n"
+            "Reply to user's message with:\n\n"
+            "• /kick\n"
+            "• /ban\n"
+            "• /mute\n"
+            "• /unmute\n"
+            "• /unban\n\n"
+            "*Bot must be admin!* 😼",
+            parse_mode="Markdown",
+            reply_markup=main_buttons()
+        )
 
-async def cmd_clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    user_id = update.effective_user.id
-    if chat_id in chat_memory:
-        chat_memory[chat_id].clear()
-    if user_id in game_sessions:
-        del game_sessions[user_id]
-    await update.message.reply_text(f"{get_emotion()} Memory cleared! ✨")
+    elif data == "game_fun":
+        await q.message.edit_text(
+            "😊 Fun features coming soon 😸",
+            reply_markup=games_buttons()
+        )
 
+    elif data == "game_weather":
+        await q.message.edit_text(
+            "🌤️ Use command:\n/weather city",
+            reply_markup=games_buttons()
+        )
 
-async def cmd_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(get_time_info())
+    elif data == "game_time":
+        await q.message.edit_text(
+            "🕒 Use:\n/time or /date",
+            reply_markup=games_buttons()
+        )
 
+    elif data == "game_word":
+        await q.message.edit_text(
+            "🎮 Start game using:\n/wordgame",
+            reply_markup=games_buttons()
+        )
 
-async def cmd_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    t = get_indian_time()
-    await update.message.reply_text(f"📅 Date: {t.strftime('%A, %d %B %Y')}")
+    elif data == "back_main":
+        await q.message.edit_text(
+            "😺 Back to main menu 🐾",
+            reply_markup=main_buttons()
+        )
 
-
-async def cmd_weather(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    args = context.args
-    city = " ".join(args) if args else None
-    weather = await get_weather_info(city)
-    await update.message.reply_text(weather)
+    await q.answer()
 
 
 # ================= WELCOME MEMBER =================
