@@ -168,7 +168,7 @@ async def games(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "  /fish — Catch fish, rare boosted by Fish Bait\n\n"
 
         "📊 Profile & Stats:\n"
-        "  /me — Profile\n"
+        "  /meow — Profile\n"
         "  /toprich — Richest cats\n"
         "  /topkill — Top fighters\n"
         "  /xp — Check XP & DNA stats\n"
@@ -1155,7 +1155,7 @@ async def leaderboard_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 # ================= /me Command =================
-async def me(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def meow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target_user = update.message.reply_to_message.from_user if update.message.reply_to_message else update.effective_user
     cat = get_cat(target_user)
 
@@ -2052,7 +2052,7 @@ def main():
 
     app.add_handler(CommandHandler("games", games))
     app.add_handler(CommandHandler("xp", xp))
-    app.add_handler(CommandHandler("me", me))
+    app.add_handler(CommandHandler("meow", meow))
     app.add_handler(CommandHandler("lobu", lobu))
     app.add_handler(CommandHandler("daily", daily))
     app.add_handler(CommandHandler("claim", claim))
