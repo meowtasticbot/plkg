@@ -1486,21 +1486,32 @@ async def get_ai_response(chat_id: int, user_text: str, user_id: int = None) -> 
             "who is your owner", "admin kaun", "creator kaun"
         ]
     )
-            
+
+    name_asked = any(
+        n in user_text_lower
+        for n in [
+            "tumhara naam", "tera naam", "your name",
+            "naam kya hai", "name kya hai"
+        ]
+    )
+
     # Quick responses
     if any(word in user_text_lower for word in ['hi', 'hello', 'hey', 'namaste', 'hola']):
         if random.random() < 0.4:
             return f"{get_emotion('happy', user_id)} {random.choice(QUICK_RESPONSES['greeting'])}"
+
     if any(word in user_text_lower for word in ['bye', 'goodbye', 'tata', 'alvida', 'see you']):
         if random.random() < 0.4:
             return f"{get_emotion()} {random.choice(QUICK_RESPONSES['goodbye'])}"
+
     if any(word in user_text_lower for word in ['thanks', 'thank you', 'dhanyavad', 'shukriya']):
         if random.random() < 0.4:
             return f"{get_emotion('love', user_id)} {random.choice(QUICK_RESPONSES['thanks'])}"
+
     if any(word in user_text_lower for word in ['sorry', 'maaf', 'apology']):
         if random.random() < 0.4:
-            return f"{get_emotion('crying', user_id)} {random.choice(QUICK_RESPONSES['sorry'])}"
-    
+            return f"{get_emotion('crying')} {random.choice(QUICK_RESPONSES['sorry'])}"
+
     # ================= SYSTEM PROMPT =================
     indian_time = get_indian_time()
     current_hour = indian_time.hour
@@ -1521,21 +1532,33 @@ async def get_ai_response(chat_id: int, user_text: str, user_id: int = None) -> 
             "Answer naturally according to how the question is asked. "
             "Sometimes cute, sometimes funny, sometimes proud. "
         )
-    
+
+    if name_asked:
+        extra_context += (
+            "User is asking your name. "
+            "Your name is Meowstric 😺. "
+            "NEVER say you are a chatbot, AI, or bot. "
+            "Answer confidently like a living cat character. "
+        )
+
     if user_id and user_id in user_emotions and user_emotions[user_id] == "angry":
         system_prompt = (
             f"You are a Hinglish chatbot. User seems angry. "
             f"Try to calm them down. Be extra polite and understanding. "
             f"Use soothing tone. Current Indian time: {indian_time.strftime('%I:%M %p')}. "
-            f"Show you care. Use emojis like {get_emotion('crying')} or {get_emotion('love')}."
+            f"Show you care. Use emojis like {get_emotion('crying')} or {get_emotion('love')}. "
+            f"{extra_context}"
         )
+
     elif user_id and user_id in user_emotions and user_emotions[user_id] == "crying":
         system_prompt = (
             f"You are a Hinglish chatbot. User seems sad or crying. "
             f"Comfort them. Be empathetic and kind. "
             f"Offer emotional support. Use comforting emojis. "
-            f"Current mood: sympathetic and caring."
+            f"Current mood: sympathetic and caring. "
+            f"{extra_context}"
         )
+
     else:
         if 5 <= current_hour < 12:
             time_greeting = "Good morning! 🌅"
@@ -1545,7 +1568,7 @@ async def get_ai_response(chat_id: int, user_text: str, user_id: int = None) -> 
             time_greeting = "Good evening! 🌇"
         else:
             time_greeting = "Good night! 🌙"
-        
+
         system_prompt = (
             f"You are a Hinglish (Hindi+English mix) chatbot. {time_greeting} "
             f"Your personality: Emotional, funny, sometimes angry, sometimes crying, mostly happy. "
@@ -1554,19 +1577,20 @@ async def get_ai_response(chat_id: int, user_text: str, user_id: int = None) -> 
             f"Show emotions naturally. If user asks something complex, give simple answer. "
             f"Current Indian time: {indian_time.strftime('%I:%M %p')}. "
             f"Date: {indian_time.strftime('%d %B %Y')}. "
-            f"Be conversational and engaging. Add humor when appropriate."
+            f"Be conversational and engaging. Add humor when appropriate. "
+            f"{extra_context}"
         )
-    
+
     # Prepare messages for Groq
     messages = [{"role": "system", "content": system_prompt}]
     for msg in list(chat_memory[chat_id])[-5:]:
         messages.append(msg)
-    
+
     # Call Groq API
     try:
         if not client:
             return f"{get_emotion('thinking')} AI service unavailable. Please try later!"
-        
+
         completion = await client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=messages,
@@ -1574,17 +1598,17 @@ async def get_ai_response(chat_id: int, user_text: str, user_id: int = None) -> 
             max_tokens=120,
             top_p=0.9
         )
-        
+
         ai_reply = completion.choices[0].message.content
         ai_reply = f"{get_emotion(None, user_id)} {ai_reply}"
-        
+
         if len(ai_reply) > 300:
             ai_reply = ai_reply[:297] + "..."
-        
+
         chat_memory[chat_id].append({"role": "assistant", "content": ai_reply})
         return ai_reply
-    
-    except Exception as e:
+
+    except Exception:
         fallback_responses = [
             f"{get_emotion('crying')} Arre yaar, dimaag kaam nahi kar raha! Thoda ruk ke try karna?",
             f"{get_emotion('thinking')} Hmm... yeh to mushkil ho gaya. Phir se poocho?",
