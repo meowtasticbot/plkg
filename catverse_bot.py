@@ -1743,7 +1743,121 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = await get_ai_response(chat_id, clean_text, user_id)
         await message.reply_text(response)
 
-# ================= CONFIG =================
+# --- ADMIN COMMANDS IMPROVED (REPLY + @USERNAME) ---
+
+async def admin_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.message
+    bot = context.bot
+
+    target_user = None
+
+    # ================= TARGET USER =================
+    # Reply case
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+
+    # @username case
+    elif context.args:
+        username = context.args[0]
+        if username.startswith("@"):
+            try:
+                member = await bot.get_chat_member(message.chat.id, username)
+                target_user = member.user
+            except:
+                target_user = None
+
+    if not target_user:
+        responses = [
+            f"{get_emotion('thinking')} Kisi ke message par reply karke command do! 👆",
+            f"{get_emotion()} Reply to user's message first! 📩",
+            f"{get_emotion('angry')} Bhai kisko? Reply karo na! 😠"
+        ]
+        await message.reply_text(random.choice(responses))
+        return
+
+    cmd = message.text.split()[0][1:]  # Remove '/'
+
+    try:
+        if cmd == "kick":
+            await bot.ban_chat_member(message.chat.id, target_user.id)
+            await bot.unban_chat_member(message.chat.id, target_user.id)
+            responses = [
+                f"{get_emotion('angry')} {target_user.first_name} ko nikal diya! 🏃💨",
+                f"{get_emotion()} Bye bye {target_user.first_name}! 👋",
+                f"{get_emotion('happy')} {target_user.first_name} removed! 🚪"
+            ]
+            await message.reply_text(random.choice(responses))
+
+        elif cmd == "ban":
+            await bot.ban_chat_member(message.chat.id, target_user.id)
+            responses = [
+                f"{get_emotion('angry')} {target_user.first_name} BANNED! 🚫",
+                f"{get_emotion()} Permanent ban for {target_user.first_name}! 🔨",
+                f"{get_emotion('crying')} Sorry {target_user.first_name}, rules are rules! 😔"
+            ]
+            await message.reply_text(random.choice(responses))
+
+        elif cmd == "mute":
+            mute_until = datetime.now() + timedelta(hours=1)
+            await bot.restrict_chat_member(
+                message.chat.id,
+                target_user.id,
+                permissions=ChatPermissions(
+                    can_send_messages=False,
+                    can_send_media_messages=False,
+                    can_send_polls=False,
+                    can_send_other_messages=False,
+                    can_add_web_page_previews=False,
+                    can_change_info=False,
+                    can_invite_users=False,
+                    can_pin_messages=False
+                ),
+                until_date=mute_until
+            )
+            responses = [
+                f"{get_emotion()} {target_user.first_name} muted for 1 hour! 🔇",
+                f"{get_emotion('thinking')} {target_user.first_name} ko chup kara diya! 🤫",
+                f"{get_emotion('angry')} {target_user.first_name}, ab 1 ghante tak bolna band! ⚠️"
+            ]
+            await message.reply_text(random.choice(responses))
+
+        elif cmd == "unmute":
+            await bot.restrict_chat_member(
+                message.chat.id,
+                target_user.id,
+                permissions=ChatPermissions(
+                    can_send_messages=True,
+                    can_send_media_messages=True,
+                    can_send_polls=True,
+                    can_send_other_messages=True,
+                    can_add_web_page_previews=True,
+                    can_change_info=False,
+                    can_invite_users=True,
+                    can_pin_messages=False
+                )
+            )
+            responses = [
+                f"{get_emotion('happy')} {target_user.first_name} unmuted! 🔊",
+                f"{get_emotion()} {target_user.first_name} ab bol sakta hai! 🎤",
+                f"{get_emotion('funny')} {target_user.first_name}, ab bol lo! 😄"
+            ]
+            await message.reply_text(random.choice(responses))
+
+        elif cmd == "unban":
+            await bot.unban_chat_member(message.chat.id, target_user.id)
+            await message.reply_text(
+                f"{get_emotion('happy')} {target_user.first_name} unbanned! 🐾"
+            )
+
+    except:
+        error_responses = [
+            f"{get_emotion('crying')} I don't have permission! ❌",
+            f"{get_emotion('angry')} Make me admin first! 👑",
+            f"{get_emotion('thinking')} Can't do that! Need admin rights! 🔒"
+        ]
+        await message.reply_text(random.choice(error_responses))
+
+#cingig
 OWNER_ID = 7789325573
 LOGGER_GROUP_ID = -1002024032988
 BOT_NAME = "Meowstric 😺"
@@ -1935,6 +2049,10 @@ def main():
     app.add_handler(CommandHandler("ubroadcast", ubroadcast))
     app.add_handler(CommandHandler("gbroadcast", gbroadcast))
     app.add_handler(ChatMemberHandler(member_update))
+    app.add_handler(CommandHandler(
+        ["kick", "ban", "mute", "unmute", "unban"],
+        admin_commands
+    ))
 
     print("ðŸ± CATVERSE FULLY UPGRADED & RUNNING...")
     app.run_polling()
