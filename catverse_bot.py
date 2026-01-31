@@ -1898,7 +1898,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_handler))
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(ChatMemberHandler(welcome_new_member, ChatMemberHandler.CHAT_MEMBER))
-    app.add_handler(CommandHandler("start", meow))
+    app.add_handler(CommandHandler("meow", meow))
     app.add_handler(ChatMemberHandler(member_update, ChatMemberHandler.CHAT_MEMBER))
 
     app.add_handler(CallbackQueryHandler(panel_handler, pattern="panel_"))
