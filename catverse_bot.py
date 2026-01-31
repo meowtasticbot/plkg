@@ -1918,7 +1918,7 @@ async def log(context, text):
     )
 
 # ================= START =================
-async def meow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def plp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     existing = users.find_one({"_id": user.id})
 
@@ -2079,7 +2079,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_handler))
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(ChatMemberHandler(welcome_new_member, ChatMemberHandler.CHAT_MEMBER))
-    app.add_handler(CommandHandler("meow", meow))
+    app.add_handler(CommandHandler("plp", plp))
     app.add_handler(CommandHandler("stats", stats_cmd))
     app.add_handler(CommandHandler("ubroadcast", ubroadcast))
     app.add_handler(CommandHandler("gbroadcast", gbroadcast))
