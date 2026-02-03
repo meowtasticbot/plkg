@@ -1302,7 +1302,7 @@ OWNER_NAME = "Moon"
 OWNER_USERNAME = "@btw_moon"
 # Direct tokens
 TOKEN = "7559754155:AAFufFptzuQpc5QfXsBaIG6EDziBaEOKZ8U"
-GROQ_API_KEY = "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"
+GROQ_API_KEY = "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"
 
 # Initialize Groq client
 client = AsyncGroq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
