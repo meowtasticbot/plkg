@@ -1311,8 +1311,8 @@ BOT_NAME = "Meowstric 😺"
 OWNER_NAME = "Moon"
 OWNER_USERNAME = "@btw_moon"
 # Direct tokens
-TOKEN = "7559754155:AAGX2O9GITEZbPk_A3x7h7fCML0ULD-nmhY"
-GROQ_API_KEY = "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"
+TOKEN = os.getenv("TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Initialize Groq client
 client = AsyncGroq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
