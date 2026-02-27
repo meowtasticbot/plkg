@@ -34,6 +34,7 @@ MIN_CLAIM_MEMBERS = int(os.getenv("MIN_CLAIM_MEMBERS", "1000"))
 # Chatbot settings
 CHATBOT_NAME = os.getenv("CHATBOT_NAME", "kitty")
 CHATBOT_OWNER_USERNAME = os.getenv("CHATBOT_OWNER_USERNAME", "@Moon_m_5")
+CHATBOT_OWNER_NAME = os.getenv("CHATBOT_OWNER_NAME", "Moon")
 CHATBOT_USERNAME = os.getenv("BOT_USERNAME", "")
 CHATBOT_TRIGGERS = tuple(
     x.strip().lower()
