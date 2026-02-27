@@ -1,0 +1,1 @@
+from Meowstric.config import *
