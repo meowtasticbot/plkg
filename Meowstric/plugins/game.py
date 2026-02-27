@@ -26,6 +26,13 @@ async def games(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "  Chat to gain XP & trigger fish events\n"
         "  /fish — Catch fish, rare boosted by Fish Bait\n\n"
 
+        "💣 Bomb Game:\n"
+        "  /bomb <amount> — Start bomb game\n"
+        "  /join <amount> — Join running bomb lobby\n"
+        "  /pass — Pass bomb when your turn\n"
+        "  /bombrank — Bomb winners leaderboard\n"
+        "  /mybomb — Your bomb stats\n\n"
+
         "📊 Profile & Stats:\n"
         "  /meow — Profile\n"
         "  /toprich — Richest cats\n"
