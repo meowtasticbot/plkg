@@ -1,15 +1,15 @@
 {
   "name": "catverse-telegram-bot",
-  "description": "Telegram game bot deployed as a Heroku worker.",
-  "repository": "https://example.com/replace-with-your-repo.git",
-  "logo": "https://raw.githubusercontent.com/heroku/node-js-getting-started/main/public/node.svg",
+  "description": "Telegram economy + game bot deployed as a Heroku worker via Docker.",
+  "repository": "https://github.com/meowtasticbot/Check",
   "keywords": [
     "telegram",
     "bot",
     "python",
-    "worker"
+    "heroku",
+    "docker"
   ],
-  "stack": "heroku-22",
+  "stack": "container",
   "formation": {
     "worker": {
       "quantity": 1,
@@ -35,7 +35,3 @@
     },
     "BOT_NAME": {
       "description": "Display name used in bot messages",
-      "required": false
-    }
-  }
-}
