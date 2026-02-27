@@ -16,7 +16,6 @@ if not MONGO_URI:
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 CHATBOT_BOT_TOKEN = os.getenv("CHATBOT_BOT_TOKEN", BOT_TOKEN)
-START_IMG_URL = os.getenv("START_IMG_URL", "https://img.sanishtech.com/u/7a53054460bf7f0318de8cb3e838412a.png")
 OWNER_LINK = os.getenv("OWNER_LINK", "https://t.me/btw_moon")
 
 # Sudo ids from env, comma separated
