@@ -65,17 +65,34 @@ async def call_model_api(provider, messages, max_tokens):
             resp = await client.post(
                 conf["url"],
                 json={"model": conf["model"], "messages": messages, "max_tokens": max_tokens},
-                headers={"Authorization": f"Bearer {conf['key']}"},
+                headers={
+                    "Authorization": f"Bearer {conf['key']}",
+                    "Content-Type": "application/json",
+                },
             )
             if resp.status_code == 200:
-                return resp.json()["choices"][0]["message"]["content"]
+                content = resp.json()["choices"][0]["message"].get("content", "")
+                if isinstance(content, list):
+                    return "".join(part.get("text", "") for part in content if isinstance(part, dict)).strip()
+                return str(content).strip()
         except Exception:
             return None
 
 
-async def get_ai_response(chat_id, user_input, user_name, model="mistral"):
+def pick_default_model() -> str:
+    if GROQ_API_KEY:
+        return "groq"
+    if MISTRAL_API_KEY:
+        return "mistral"
+    if CODESTRAL_API_KEY:
+        return "codestral"
+    return "mistral"
+
+
+async def get_ai_response(chat_id, user_input, user_name, model=None):
+    model = model or pick_default_model()
     is_code = any(kw in user_input.lower() for kw in ["code", "python", "fix", "debug"])
-    active_model = "codestral" if is_code else model
+    active_model = "codestral" if is_code and CODESTRAL_API_KEY else model
     tokens = 4096 if is_code else 50
     prompt = f"You are MEOWSTRIC CAT AI. Sweet Hinglish girl. Reply in 1 short sentence only. User: {user_name}"
 
@@ -83,7 +100,15 @@ async def get_ai_response(chat_id, user_input, user_name, model="mistral"):
     history = doc.get("history", [])
     msgs = [{"role": "system", "content": prompt}] + history[-6:] + [{"role": "user", "content": user_input}]
 
-    reply = await call_model_api(active_model, msgs, tokens) or "Achha ji? 😊"
+    reply = await call_model_api(active_model, msgs, tokens)
+    if not reply and model != "groq" and GROQ_API_KEY:
+        reply = await call_model_api("groq", msgs, tokens)
+    if not reply and model != "mistral" and MISTRAL_API_KEY:
+        reply = await call_model_api("mistral", msgs, tokens)
+    if not reply and model != "codestral" and CODESTRAL_API_KEY:
+        reply = await call_model_api("codestral", msgs, tokens)
+
+    reply = reply or "Achha ji? 😊
     chatbot_collection.update_one(
         {"chat_id": chat_id},
         {
