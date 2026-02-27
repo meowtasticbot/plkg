@@ -108,7 +108,7 @@ async def get_ai_response(chat_id, user_input, user_name, model=None):
     if not reply and model != "codestral" and CODESTRAL_API_KEY:
         reply = await call_model_api("codestral", msgs, tokens)
 
-    reply = reply or "Achha ji? 😊
+    reply = reply or "Achha ji? 😊"
     chatbot_collection.update_one(
         {"chat_id": chat_id},
         {
