@@ -8,7 +8,7 @@ from telegram.ext import ContextTypes
 from Meowstric.config import SUPPORT_GROUP, WELCOME_IMG_URL
 from Meowstric.database import groups_collection, sudoers_collection
 from telegram.error import BadRequest, TelegramError
-from Meowstric.utils import SUDO_USERS, get_mention, log_to_channel, reload_sudoer
+from Meowstric.utils import SUDO_USERS, get_mention, log_to_channel, reload_sudoers
 
 
 def get_emotion(mood: str = "happy") -> str:
