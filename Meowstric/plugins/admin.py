@@ -31,7 +31,7 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
     joined_statuses = {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER}
     left_statuses = {ChatMemberStatus.LEFT, ChatMemberStatus.BANNED}
 
-async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
+@@ -57,28 +57,123 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 "username": f"@{member.username}" if member.username else "N/A",
             },
         )
