@@ -117,7 +117,7 @@ from Meowstric.plugins.economy import bal, claim, daily, gift, give, inventory, 
 from Meowstric.plugins.events import (
     chat_member_update as member_update,
     close_economy,
-    economy_switch
+    economy_switch,
     open_economy,
 )
 from Meowstric.plugins.game import (
