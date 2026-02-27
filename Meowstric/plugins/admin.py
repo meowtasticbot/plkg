@@ -1,12 +1,14 @@
 
 
-from telegram import ChatPermissions, Update
+from telegram import ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ChatMemberStatus, ChatType
+from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
-from Meowstric.database import sudoers_collection
+from Meowstric.config import SUPPORT_GROUP, WELCOME_IMG_URL
+from Meowstric.database import groups_collection, sudoers_collection
 from telegram.error import BadRequest, TelegramError
-from Meowstric.utils import SUDO_USERS, log_to_channel, reload_sudoers
+from Meowstric.utils import SUDO_USERS, get_mention, log_to_channel, reload_sudoer
 
 
 def get_emotion(mood: str = "happy") -> str:
@@ -55,22 +57,43 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
 
 async def welcome_new_members_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Welcome each newly joined member with varied messages."""
+    """Welcome each newly joined member with image/card style message."""
     if not update.message or not update.message.new_chat_members:
         return
 
     chat = update.effective_chat
+    group_data = groups_collection.find_one({"chat_id": chat.id}) or {}
+    if not group_data.get("welcome_enabled", True):
+        return
     base_messages = [
-        "🎉 Welcome {name}! Khush aamdeed! 😊",
-        "🌟 Aao ji {name}! Group me welcome! 🫂",
-        "✨ Hey {name}! Great to have you here! 💖",
-        "😺 {name} joined the cat gang! Warm welcome!",
-        "🌈 Welcome aboard, {name}! Masti shuru karo!",
+        "🎉 <b>Welcome {name}!</b> Khush aamdeed! 😊",
+        "🌟 <b>Aao ji {name}!</b> Group me warm welcome! 🫂",
+        "✨ <b>Hey {name}!</b> Great to have you here! 💖",
+        "😺 <b>{name}</b> joined the cat gang! Warm welcome!",
+        "🌈 <b>Welcome aboard, {name}!</b> Masti shuru karo!",
     ]
 
     for idx, member in enumerate(update.message.new_chat_members):
+        if member.id == context.bot.id:
+            continue
         msg_template = base_messages[idx % len(base_messages)]
-        await context.bot.send_message(chat.id, msg_template.format(name=member.first_name))
+        text = (
+            f"{msg_template.format(name=get_mention(member))}\n\n"
+            "🤖 I'm here to help with games, economy & smart chat replies."
+        )
+
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton("💬 Support", url=SUPPORT_GROUP)]])
+        try:
+            await context.bot.send_photo(
+                chat_id=chat.id,
+                photo=WELCOME_IMG_URL,
+                caption=text,
+                parse_mode=ParseMode.HTML,
+                reply_markup=kb,
+            )
+        except Exception:
+            await context.bot.send_message(chat.id, text, parse_mode=ParseMode.HTML)
+            
 
 
 
