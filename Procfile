@@ -1,1 +1,1 @@
-worker: python catverse_bot.py
+worker: python main.py
