@@ -1,8 +1,3 @@
-from config import BOT_NAME, BOT_TOKEN
-from Meowstric.plugins.admin import admin_commands, member_update, plp, welcome_new_member
-from Meowstric.plugins.broadcast import gbroadcast, ubroadcast
-from Meowstric.plugins.chatbot import chat_handler
-from Meowstric.plugins.economy import bal, claim, daily, gift, give, inventory, rob, use
 from Meowstric.plugins.game import (
     fish,
     fishlb,
@@ -28,11 +23,11 @@ async def button_handler(update, context):
     if not query:
         return
 
- data = query.data or ""
+    data = query.data or ""
     if data in {"return_start", "talk_baka", "game_features"}:
         await start_callback(update, context)
         return
 
- await query.answer()
+    await query.answer()
 
  
