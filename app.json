@@ -35,3 +35,8 @@
     },
     "BOT_NAME": {
       "description": "Display name used in bot messages",
+      "required": false,
+      "value": "CatverseBot"
+    }
+  }
+}
