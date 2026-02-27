@@ -5,6 +5,7 @@ from telegram.constants import ChatMemberStatus, ChatType
 from telegram.ext import ContextTypes
 
 from Meowstric.database import sudoers_collection
+from telegram.error import BadRequest, TelegramError
 from Meowstric.utils import SUDO_USERS, log_to_channel, reload_sudoers
 
 
@@ -96,45 +97,53 @@ async def admin_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception:
                 return await message.reply_text("Reply to a user or pass a valid @username/user_id.")
 
-    if not target_user:
-        return await message.reply_text("Reply to a user or pass @username/user_id.")
+    if target_user.id == sender.id:
+        return await message.reply_text("Khud pe admin action allowed nahi hai.")
 
-    if command == "kick":
-        await chat.unban_member(target_user.id)
-        await message.reply_text(f"{get_emotion('angry')} Kicked {target_user.first_name}.")
-    elif command == "ban":
-        await chat.ban_member(target_user.id)
-        await message.reply_text(f"🚫 Banned {target_user.first_name}.")
-    elif command == "mute":
-        await chat.restrict_member(
-            target_user.id,
-            permissions=ChatPermissions(can_send_messages=False),
-        )
-        await message.reply_text(f"🔇 Muted {target_user.first_name}.")
-    elif command == "unmute":
-        await chat.restrict_member(
-            target_user.id,
-            permissions=ChatPermissions(
-                can_send_messages=True,
-                can_send_audios=True,
-                can_send_documents=True,
-                can_send_photos=True,
-                can_send_videos=True,
-                can_send_video_notes=True,
-                can_send_voice_notes=True,
-                can_send_polls=True,
-                can_send_other_messages=True,
-                can_add_web_page_previews=True,
-                can_change_info=False,
-                can_invite_users=True,
-                can_pin_messages=False,
-            ),
-        )
-        await message.reply_text(f"🔊 Unmuted {target_user.first_name}.")
-    elif command == "unban":
-        await chat.unban_member(target_user.id)
-        await message.reply_text(f"✅ Unbanned {target_user.first_name}.")
+    target_member = await chat.get_member(target_user.id)
+    if target_member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+        return await message.reply_text("Admin/owner par ye action allowed nahi hai.")
 
+    try:
+        if command == "kick":
+            await chat.unban_member(target_user.id)
+            await message.reply_text(f"{get_emotion('angry')} Kicked {target_user.first_name}.")
+        elif command == "ban":
+            await chat.ban_member(target_user.id)
+            await message.reply_text(f"🚫 Banned {target_user.first_name}.")
+        elif command == "mute":
+            await chat.restrict_member(
+                target_user.id,
+                permissions=ChatPermissions(can_send_messages=False),
+            )
+            await message.reply_text(f"🔇 Muted {target_user.first_name}.")
+        elif command == "unmute":
+            await chat.restrict_member(
+                target_user.id,
+                permissions=ChatPermissions(
+                    can_send_messages=True,
+                    can_send_audios=True,
+                    can_send_documents=True,
+                    can_send_photos=True,
+                    can_send_videos=True,
+                    can_send_video_notes=True,
+                    can_send_voice_notes=True,
+                    can_send_polls=True,
+                    can_send_other_messages=True,
+                    can_add_web_page_previews=True,
+                    can_change_info=False,
+                    can_invite_users=True,
+                    can_pin_messages=False,
+                ),
+            )
+            await message.reply_text(f"🔊 Unmuted {target_user.first_name}.")
+        elif command == "unban":
+            await chat.unban_member(target_user.id)
+            await message.reply_text(f"✅ Unbanned {target_user.first_name}.")
+    except BadRequest as exc:
+        await message.reply_text(f"⚠️ Action failed: {exc.message}")
+    except TelegramError:
+        await message.reply_text("⚠️ Telegram API error aayi, dobara try karo."
 
 async def plp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
