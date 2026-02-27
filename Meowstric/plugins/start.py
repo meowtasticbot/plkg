@@ -6,31 +6,28 @@ from telegram.constants import ParseMode
 from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 
-from Meowstric.config import BOT_NAME, OWNER_LINK, START_IMG_URL
+from Meowstric.config import BOT_NAME, OWNER_LINK, START_IMG_URL, SUPPORT_GROUP
 from Meowstric.utils import ensure_user_exists, log_to_channel, track_group
 
 
 def get_start_keyboard(bot_username):
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("💬 𝚃𝙰𝙻𝙺 𝚃𝙾 𝙱𝙰𝙺𝙰", callback_data="talk_baka"),
-            InlineKeyboardButton("𝙾𝚆𝙽𝙴𝚁 ⚡", url=OWNER_LINK),
+            InlineKeyboardButton("💬 Chat with Meowstric", callback_data="talk_baka"),
+            InlineKeyboardButton("⚡ Owner", url=OWNER_LINK),
         ],
         [
-            InlineKeyboardButton("🧸 𝙵𝚁𝙸𝙴𝙽𝙳𝚂", url="https://t.me/+hvxrr2DudTs4ODU1"),
-            InlineKeyboardButton("𝙶𝙰𝙼𝙴𝚂 🎮", callback_data="game_features"),
+            InlineKeyboardButton("🎮 Game Zone", callback_data="game_features"),
+            InlineKeyboardButton("🛟 Support", url=SUPPORT_GROUP)
         ],
         [
-            InlineKeyboardButton(
-                "➕ 𝙰𝙳𝙳 𝙼𝙴 𝚃𝙾 𝚈𝙾𝚄𝚁 𝙶𝚁𝙾𝚄𝙿 👥",
-                url=f"https://t.me/{bot_username}?startgroup=true",
-            )
+            InlineKeyboardButton("➕ Add Me To Your Group", url=f"https://t.me/{bot_username}?startgroup=true")
         ],
     ])
 
 
 def get_back_to_start():
-    return InlineKeyboardMarkup([[InlineKeyboardButton("🔙 𝙱𝚊𝚌𝚔", callback_data="return_start")]])
+    return InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="return_start")]])
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -51,9 +48,13 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     caption = (
-        f"✨ <b>𝙷𝚎𝚢 — {user.first_name} ~</b>\n"
-        f"💌 𝚈𝚘𝚞'𝚛𝚎 𝚃𝚊𝚕𝚔𝚒𝚗𝚐 𝚃𝚘 {BOT_NAME}, 𝙰 𝚂𝚊𝚜𝚜𝚢 𝙲𝚞𝚝𝚒𝚎 💕\n\n"
-        "➬ 𝙲𝚑𝚘𝚘𝚜𝚎 𝙰𝚗 𝙾𝚙𝚝𝚒𝚘𝚗 𝙱𝚎𝚕𝚘𝚠:"
+        f"🌟 <b>Welcome {user.first_name}!</b>\n"
+        f"I am <b>{BOT_NAME}</b> — your stylish group manager + fun AI bestie. 😺\n\n"
+        "✨ <b>What I can do for you:</b>\n"
+        "• Smart AI chat replies\n"
+        "• Economy + games + rankings\n"
+        "• Group tools, moderation and more\n\n"
+        "👇 Tap any button and let's start the fun."
     )
 
     kb = get_start_keyboard(context.bot.username)
@@ -95,23 +96,23 @@ async def start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await start_handler(update, context)
 
     if data == "talk_baka":
-        await query.answer("Baka mode on 😼")
+        await query.answer("Meowstric is ready 😼")
         text = (
-            "😼 <b>Baka Chat Mode</b>\n\n"
-            "Just send me any normal text message and I will reply.\n"
-            "Use game/economy commands from menu too."
+            "😼 <b>Meowstric Chat Mode Activated</b>\n\n"
+            "Send me any text message and I'll reply smartly.\n"
+            "For best response in groups, reply to my message or start with hi/hey/meow."
         )
     elif data == "game_features":
-        await query.answer("Opening game guide 🎮")
+        await query.answer("Opening game menu 🎮")
         text = (
-            "🎮 <b>Game Features</b>\n\n"
-            "• /daily - Daily coins\n"
-            "• /claim - Group claim reward\n"
-            "• /bal - Check wallet\n"
-            "• /rob, /kill, /protect - PvP actions\n"
-            "• /shop, /inventory, /use - Items\n"
-            "• /fish, /fishlb - Fishing system\n"
-            "• /toprich, /topkill, /xp - Leaderboards"
+            "🎮 <b>Game & Economy Highlights</b>\n\n"
+            "• <code>/daily</code> - Daily coins\n"
+            "• <code>/claim</code> - Group claim reward\n"
+            "• <code>/bal</code> - Wallet check\n"
+            "• <code>/rob</code>, <code>/kill</code>, <code>/protect</code> - PvP actions\n"
+            "• <code>/shop</code>, <code>/inventory</code>, <code>/use</code> - Items\n"
+            "• <code>/fish</code>, <code>/fishlb</code> - Fishing system\n"
+            "• <code>/toprich</code>, <code>/topkill</code>, <code>/xp</code> - Leaderboards"
         )
     else:
         await query.answer()
