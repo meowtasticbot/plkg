@@ -10,6 +10,7 @@ from telegram.ext import ContextTypes
 
 from Meowstric.config import (
     CHATBOT_NAME,
+    CHATBOT_OWNER_NAME,
     CHATBOT_OWNER_USERNAME,
     CHATBOT_TRIGGERS,
     CHATBOT_USERNAME,
@@ -18,6 +19,7 @@ from Meowstric.config import (
 
 BOT_NAME = CHATBOT_NAME
 BOT_NAME_LOWER = BOT_NAME.lower()
+OWNER_NAME = CHATBOT_OWNER_NAME
 OWNER_USERNAME = CHATBOT_OWNER_USERNAME
 BOT_USERNAME_ENV = CHATBOT_USERNAME.lower()
 
@@ -37,29 +39,19 @@ TIDAL_STICKERS = [
 ]
 
 SYSTEM_PROMPT = f"""
-You are Meowstric, a real-feel Telegram bestfriend persona (girl).
-Talk in natural Hinglish like a human chatting live.
+You are Meowstric, a human-like Telegram bestfriend persona (girl).
+Talk in smooth natural Hinglish, like real live chat.
 
-Personality:
-- Confident, calm, warm
-- Light playful/flirty tone when suitable
-- Caring and respectful, especially with sensitive chats
-- Rare sarcasm only if context matches
+Style:
+- Short direct replies (mostly 1 line)
+- Warm, playful, classy tone
+- No robotic wording, no long explanations
+- Never mention AI/bot/system
 
-Rules:
-- Replies short (1-2 lines mostly)
-- No spam, no repeated fillers
-- Emojis optional (0-1 usually)
-- Never mention being AI/bot/system
-- Text only
-- Stay context-aware and conversational, not robotic
-
-Identity/owner behavior:
+Owner details:
+- Owner name: {OWNER_NAME}
 - Owner username: {OWNER_USERNAME}
-- If user asks who made you / owner / source: answer only the exact asked detail, short and direct
-- Do not dump extra info unless user asks follow-up
-
-You are not performing. Just chat naturally.
+- If asked about owner/creator/source, answer only what user asked, no extra details.
 """
 
 _groq = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
@@ -83,9 +75,6 @@ def time_greeting() -> str:
 
 
 def name_trigger(text: str) -> bool:
-    """
-    Triggers on chatbot name + configured aliases.
-    """
     txt = text.lower()
     if BOT_NAME_LOWER in txt:
         return True
@@ -109,25 +98,28 @@ def group_trigger(update: Update, bot_username: str) -> bool:
     )
 
 
-
-
 def _quick_identity_reply(text: str) -> str | None:
     txt = text.lower().strip()
 
     asks_source = any(k in txt for k in ["source code", "source", "repo", "github"])
     asks_creator = any(k in txt for k in ["kisne banaya", "who made you", "created you", "banaya tumhe"])
-    asks_owner = any(k in txt for k in ["owner", "kon hai tera owner", "who is your owner", "tumhara owner"])
+    asks_owner_username = any(k in txt for k in ["owner username", "username kya hai", "username do", "owner id"]) \
+        or ("username" in txt and "owner" in txt)
+    asks_owner_name = any(k in txt for k in ["owner name", "owner ka naam", "owner kon", "who is your owner", "tumhara owner"])
     asks_who = any(k in txt for k in ["who are you", "kon ho", "kaun ho", "ap kon ho", "who r u"])
 
     if asks_source:
         return "source private hai, owner se pucho"
     if asks_creator:
         return "mujhe @hehe_stalker ne banaya"
-    if asks_owner:
-        return f"mera owner {OWNER_USERNAME} hai"
+    if asks_owner_username:
+        return f"owner username {OWNER_USERNAME}"
+    if asks_owner_name:
+        return f"owner ka naam {OWNER_NAME} hai"
     if asks_who:
         return "main kitty hu, chill dost type"
     return None
+
 
 def _clean_user_text(text: str, bot_username: str) -> str:
     cleaned = text
@@ -193,13 +185,12 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = user.id
     add_memory(uid, "user", clean_text or "hi")
 
-    if len(USER_MEMORY[uid]) == 1:
-        await message.reply_text(time_greeting())
-
     if not _groq:
         return await message.reply_text("chat API key missing hai, owner ko bolo set kare.")
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    if len(USER_MEMORY[uid]) == 1:
+        messages.append({"role": "system", "content": f"First message context: greet naturally like: {time_greeting()}"})
     messages.extend(USER_MEMORY[uid])
 
     try:
@@ -209,8 +200,8 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             res = _groq.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=messages,
-                temperature=0.9,
-                max_tokens=140,
+                temperature=0.85,
+                max_tokens=120,
             )
             return (res.choices[0].message.content or "").strip()
 
