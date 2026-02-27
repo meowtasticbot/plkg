@@ -5,10 +5,12 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.error import BadRequest
 from telegram.ext import ContextTypes
+from pathlib import Path
 
 from Meowstric.config import BOT_NAME, OWNER_LINK, SUPPORT_GROUP
 from Meowstric.utils import ensure_user_exists, log_to_channel, track_group
 
+START_IMAGE_PATH = Path(__file__).resolve().parent.parent / "assets" / "123344.jpeg"
 
 def get_start_keyboard(bot_username):
     return InlineKeyboardMarkup([
@@ -70,8 +72,9 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
     else:       
         try:
+            photo = START_IMAGE_PATH if START_IMAGE_PATH.exists() else "https://img.sanishtech.com/u/7a53054460bf7f0318de8cb3e838412a.png"
             await update.message.reply_photo(
-                photo="https://img.sanishtech.com/u/7a53054460bf7f0318de8cb3e838412a.png",
+                photo=photo,
                 caption=caption,
                 reply_markup=kb,
                 parse_mode=ParseMode.HTML,
