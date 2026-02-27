@@ -107,7 +107,7 @@ async def run_game(update, context, chat_id):
 
 
 async def bomb_leaders(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    top = cats.find({"bomb_wins": {"$gt": 0}}).sort("bomb_wins", -1).limit(10
+    top = cats.find({"bomb_wins": {"$gt": 0}}).sort("bomb_wins", -1).limit(10)
     msg = "💣 <b>BOMB GAME RANKINGS</b>\n"
     for i, u in enumerate(top, 1):
         medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "🔹"
