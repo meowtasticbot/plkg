@@ -68,6 +68,7 @@ async def _notify_startup(application):
 async def post_init(application):
     commands = [
         ("start", "Start catverse system"),
+        ("meow", "see ur profile"),
         ("bal", "Wallet balance"),
         ("kill", "Attack someone"),
         ("rob", "Steal coins"),
