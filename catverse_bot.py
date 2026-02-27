@@ -110,13 +110,14 @@ def calculate_global_rank(user_id: int) -> int:
     return 0
 
 
-from Meowstric.plugins.admin import admin_commands, plp, welcome_new_member
+from Meowstric.plugins.admin import admin_commands, plp, welcome_new_member, welcome_new_members_messag
 from Meowstric.plugins.broadcast import gbroadcast, ubroadcast
 from Meowstric.plugins.chatbot import chat_handler
 from Meowstric.plugins.economy import bal, claim, daily, gift, give, inventory, rob, use
 from Meowstric.plugins.events import (
     chat_member_update as member_update,
     close_economy,
+    economy_switch
     open_economy,
 )
 from Meowstric.plugins.game import (
