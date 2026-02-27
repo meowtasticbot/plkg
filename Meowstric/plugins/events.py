@@ -31,8 +31,7 @@ async def close_economy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if member.status not in [ChatMember.ADMINISTRATOR, ChatMember.OWNER]:
         return await update.message.reply_text("Only admins can use this.")
 
-      groups_collection.update_one({"chat_id": chat.id}, {"$set": {"economy_enabled": False}}, upsert=True)
-async def claim_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    groups_collection.update_one({"chat_id": chat.id}, {"$set": {"economy_enabled": False}}, upsert=True)
     await update.message.reply_text("Economy and games disabled.")
 
 
