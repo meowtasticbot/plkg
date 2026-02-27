@@ -1,4 +1,4 @@
-import random
+
 
 from telegram import ChatPermissions, Update
 from telegram.constants import ChatMemberStatus, ChatType
@@ -33,12 +33,7 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
     left_statuses = {ChatMemberStatus.LEFT, ChatMemberStatus.BANNED}
 
     if new_status in joined_statuses and old_status not in joined_statuses:
-        messages = [
-            f"🎉 Welcome {member.first_name}! Khush aamdeed! 😊",
-            f"🌟 Aao ji {member.first_name}! Group me welcome! 🫂",
-            f"✨ Hey {member.first_name}! Great to have you here! 💖",
-        ]
-        await context.bot.send_message(chat.id, random.choice(messages))
+
         await log_to_channel(
             context.bot,
             "member_added",
@@ -58,6 +53,25 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 "username": f"@{member.username}" if member.username else "N/A",
             },
         )
+
+async def welcome_new_members_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Welcome each newly joined member with varied messages."""
+    if not update.message or not update.message.new_chat_members:
+        return
+
+    chat = update.effective_chat
+    base_messages = [
+        "🎉 Welcome {name}! Khush aamdeed! 😊",
+        "🌟 Aao ji {name}! Group me welcome! 🫂",
+        "✨ Hey {name}! Great to have you here! 💖",
+        "😺 {name} joined the cat gang! Warm welcome!",
+        "🌈 Welcome aboard, {name}! Masti shuru karo!",
+    ]
+
+    for idx, member in enumerate(update.message.new_chat_members):
+        msg_template = base_messages[idx % len(base_messages)]
+        await context.bot.send_message(chat.id, msg_template.format(name=member.first_name))
+
 
 
 async def admin_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -187,4 +201,4 @@ async def plp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.reply_text(f"✅ Removed <code>{target_id}</code> from sudoers.", parse_mode="HTML")
 
 
-__all__ = ["welcome_new_member", "admin_commands", "plp"]
+__all__ = ["welcome_new_member", "welcome_new_members_message", "admin_commands", "plp"]
