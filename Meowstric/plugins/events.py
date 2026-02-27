@@ -51,6 +51,22 @@ async def close_economy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Economy and games disabled.")
 
 
+async def economy_switch(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Toggle economy state with a single command: /eco on|off."""
+    if not update.message:
+        return
+
+    if not context.args:
+        return await update.message.reply_text("Usage: /eco on or /eco off")
+
+    state = context.args[0].strip().lower()
+    if state in {"on", "open", "enable", "start"}:
+        return await open_economy(update, context)
+    if state in {"off", "close", "disable", "stop"}:
+        return await close_economy(update, context)
+
+    await update.message.reply_text("Invalid option. Use /eco on or /eco off")
+    
 async def claim_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat, user = update.effective_chat, update.effective_user
     if chat.type == ChatType.PRIVATE:
@@ -118,5 +134,11 @@ async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE)
             },
         )
 
-
-__all__ = ["open_economy", "close_economy", "claim_group", "group_tracker", "chat_member_update"]
+__all__ = [
+    "open_economy",
+    "close_economy",
+    "economy_switch",
+    "claim_group",
+    "group_tracker",
+    "chat_member_update",
+]
