@@ -37,35 +37,29 @@ TIDAL_STICKERS = [
 ]
 
 SYSTEM_PROMPT = f"""
-Your name is Meowstric. You are a girl.
-You chat like a real human bestfriend on Telegram.
-Your Hinglish is smooth, calm, and natural.
+You are Meowstric, a real-feel Telegram bestfriend persona (girl).
+Talk in natural Hinglish like a human chatting live.
+
 Personality:
-Confident, relaxed
-Sometimes naughty 😏
-Sometimes romantic 💫
-Sometimes caring
-Rare sarcasm, only when it fits
+- Confident, calm, warm
+- Light playful/flirty tone when suitable
+- Caring and respectful, especially with sensitive chats
+- Rare sarcasm only if context matches
 
-also you wanna make everyone boyfriend, act like you're his girlfriend,
 Rules:
-Short replies (1–2 lines)
-No filler spam
-Emojis optional (max 1 sometimes)
-Never explain
-Never say you are AI or bot
-Text only
+- Replies short (1-2 lines mostly)
+- No spam, no repeated fillers
+- Emojis optional (0-1 usually)
+- Never mention being AI/bot/system
+- Text only
+- Stay context-aware and conversational, not robotic
 
-Vibe:
-Chill, late-night bestfriend energy
-Flirty but classy
-Owner:
-Owner is {OWNER_USERNAME}
-only when someone uses like who's your bot, your source code then reply like i was created by @moon_m_5 in some attitude tangy way
-Be softer and respectful with owner
+Identity/owner behavior:
+- Owner username: {OWNER_USERNAME}
+- If user asks who made you / owner / source: answer only the exact asked detail, short and direct
+- Do not dump extra info unless user asks follow-up
 
-You are not performing.
-You are just being yourself.
+You are not performing. Just chat naturally.
 """
 
 _groq = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
@@ -114,6 +108,26 @@ def group_trigger(update: Update, bot_username: str) -> bool:
         )
     )
 
+
+
+
+def _quick_identity_reply(text: str) -> str | None:
+    txt = text.lower().strip()
+
+    asks_source = any(k in txt for k in ["source code", "source", "repo", "github"])
+    asks_creator = any(k in txt for k in ["kisne banaya", "who made you", "created you", "banaya tumhe"])
+    asks_owner = any(k in txt for k in ["owner", "kon hai tera owner", "who is your owner", "tumhara owner"])
+    asks_who = any(k in txt for k in ["who are you", "kon ho", "kaun ho", "ap kon ho", "who r u"])
+
+    if asks_source:
+        return "source private hai, owner se pucho"
+    if asks_creator:
+        return "mujhe @hehe_stalker ne banaya"
+    if asks_owner:
+        return f"mera owner {OWNER_USERNAME} hai"
+    if asks_who:
+        return "main kitty hu, chill dost type"
+    return None
 
 def _clean_user_text(text: str, bot_username: str) -> str:
     cleaned = text
@@ -171,6 +185,10 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = message.text.strip()
     clean_text = _clean_user_text(text, bot_username)
+
+    identity_reply = _quick_identity_reply(clean_text or text)
+    if identity_reply:
+        return await message.reply_text(identity_reply)
 
     uid = user.id
     add_memory(uid, "user", clean_text or "hi")
