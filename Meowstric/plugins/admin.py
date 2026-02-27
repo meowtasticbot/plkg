@@ -32,6 +32,29 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
     left_statuses = {ChatMemberStatus.LEFT, ChatMemberStatus.BANNED}
 
 @@ -57,28 +57,123 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
+    if new_status in joined_statuses and old_status not in joined_statuses:
+        messages = [
+            f"🎉 Welcome {member.first_name}! Khush aamdeed! 😊",
+            f"🌟 Aao ji {member.first_name}! Group me welcome! 🫂",
+            f"✨ Hey {member.first_name}! Great to have you here! 💖",
+        ]
+        await context.bot.send_message(chat.id, random.choice(messages))
+        await log_to_channel(
+            context.bot,
+            "member_added",
+            {
+                "chat": f"{chat.title} ({chat.id})",
+                "user": f"{member.first_name} ({member.id})",
+                "username": f"@{member.username}" if member.username else "N/A",
+            },
+        )
+    elif new_status in left_statuses and old_status not in left_statuses:
+        await log_to_channel(
+            context.bot,
+            "member_removed",
+            {
+                "chat": f"{chat.title} ({chat.id})",
+                "user": f"{member.first_name} ({member.id})",
                 "username": f"@{member.username}" if member.username else "N/A",
             },
         )
