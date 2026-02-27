@@ -3,6 +3,8 @@
 
 import logging
 
+from telegram import ChatMember
+from telegram.constants import ChatType
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -21,6 +23,28 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
+def _group_admin_only_when_economy_opened(handler):
+    async def wrapped(update, context):
+        chat = update.effective_chat
+        user = update.effective_user
+
+        if not chat or chat.type == ChatType.PRIVATE or not user:
+            return await handler(update, context)
+
+        group = core.groups_collection.find_one({"chat_id": chat.id}) or core.groups_collection.find_one({"_id": chat.id}) or {}
+        if group.get("economy_enabled", True):
+            try:
+                member = await chat.get_member(user.id)
+            except Exception:
+                return await update.message.reply_text("⚠️ Unable to verify admin status right now.")
+
+            if member.status not in [ChatMember.ADMINISTRATOR, ChatMember.OWNER]:
+                return await update.message.reply_text("🚫 Economy open hai, lekin group me games/economy commands sirf admins use kar sakte hain.")
+
+        return await handler(update, context)
+
+    return wrapped
 
 
 # ─── BOT COMMAND MENU (SYNCED WITH HANDLERS) ──────────────────────────────────
@@ -78,28 +102,35 @@ def main():
     )
 
     # GAME / ECONOMY
-    app.add_handler(CommandHandler("games", core.games))
-    app.add_handler(CommandHandler("xp", core.xp))
-    app.add_handler(CommandHandler("meow", core.meow))
-    app.add_handler(CommandHandler("lobu", core.lobu))
-    app.add_handler(CommandHandler("daily", core.daily))
-    app.add_handler(CommandHandler("claim", core.claim))
-    app.add_handler(CommandHandler("bal", core.bal))
-    app.add_handler(CommandHandler("give", core.give))
-    app.add_handler(CommandHandler("gift", core.gift))
-    app.add_handler(CommandHandler("use", core.use))
-    app.add_handler(CommandHandler("rob", core.rob))
-    app.add_handler(CommandHandler("fish", core.fish))
-    app.add_handler(CommandHandler("moon_mere_papa", core.moon_mere_papa))
-    app.add_handler(CommandHandler("kill", core.kill))
-    app.add_handler(CommandHandler("protect", core.protect))
-    app.add_handler(CommandHandler("toprich", core.toprich))
-    app.add_handler(CommandHandler("topkill", core.topkill))
-    app.add_handler(CommandHandler("shop", core.shop))
-    app.add_handler(CommandHandler("inventory", core.inventory))
-    app.add_handler(CommandHandler("fun", core.fun))
-    app.add_handler(CommandHandler("upgrade", core.upgrade))
-    app.add_handler(CommandHandler("fishlb", core.fishlb))
+   app.add_handler(CommandHandler(["open_economy", "openeconomy", "openeco"], core.open_economy))
+    app.add_handler(CommandHandler(["close_economy", "closeeconomy", "closeeco"], core.close_economy))
+
+    gated_handlers = [
+        ("games", core.games),
+        ("xp", core.xp),
+        ("meow", core.meow),
+        ("lobu", core.lobu),
+        ("daily", core.daily),
+        ("claim", core.claim),
+        ("bal", core.bal),
+        ("give", core.give),
+        ("gift", core.gift),
+        ("use", core.use),
+        ("rob", core.rob),
+        ("fish", core.fish),
+        ("moon_mere_papa", core.moon_mere_papa),
+        ("kill", core.kill),
+        ("protect", core.protect),
+        ("toprich", core.toprich),
+        ("topkill", core.topkill),
+        ("shop", core.shop),
+        ("inventory", core.inventory),
+        ("fun", core.fun),
+        ("upgrade", core.upgrade),
+        ("fishlb", core.fishlb),
+    ]
+    for name, fn in gated_handlers:
+        app.add_handler(CommandHandler(name, _group_admin_only_when_economy_opened(fn)))
 
     # START / CHAT / CALLBACKS
     app.add_handler(CommandHandler("start", core.start_handler))
