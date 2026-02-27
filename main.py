@@ -77,6 +77,9 @@ async def post_init(application):
         ("fish", "Catch fish"),
         ("stats", "Owner stats panel"),
         ("ping", "Check bot latency and server stats"),
+        ("waifu", "Random waifu image"),
+        ("wpropose", "Propose to a waifu (costs coins)"),
+        ("wmarry", "Marry a random waifu with cooldown"),
     ]
     await application.bot.set_my_commands(commands)
     await _notify_startup(application)
@@ -132,6 +135,10 @@ def main():
 
     # START / CHAT / CALLBACKS
     app.add_handler(CommandHandler("start", core.start_handler))
+    app.add_handler(CommandHandler("waifu", core.waifu_cmd))
+    app.add_handler(CommandHandler("wpropose", core.wpropose))
+    app.add_handler(CommandHandler("wmarry", core.wmarry))
+    app.add_handler(CommandHandler(core.SFW_ACTIONS, core.waifu_action))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, core.chat_handler))
     app.add_handler(CommandHandler("ping", core.ping))
     app.add_handler(MessageHandler(filters.Sticker.ALL, core.tidal_sticker_reply))
