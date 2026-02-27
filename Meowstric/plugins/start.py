@@ -7,7 +7,7 @@ from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 
 from Meowstric.config import BOT_NAME, OWNER_LINK, START_IMG_URL
-from Meowstric.utils import ensure_user_exists, track_group
+from Meowstric.utils import ensure_user_exists, log_to_channel, track_group
 
 
 def get_start_keyboard(bot_username):
@@ -40,6 +40,16 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ensure_user_exists(user)
     track_group(chat, user)
 
+    if chat and chat.type == "private":
+        await log_to_channel(
+            context.bot,
+            "bot_start",
+            {
+                "user": f"{user.first_name} ({user.id})",
+                "username": f"@{user.username}" if user.username else "N/A",
+            },
+        )
+
     caption = (
         f"✨ <b>𝙷𝚎𝚢 — {user.first_name} ~</b>\n"
         f"💌 𝚈𝚘𝚞'𝚛𝚎 𝚃𝚊𝚕𝚔𝚒𝚗𝚐 𝚃𝚘 {BOT_NAME}, 𝙰 𝚂𝚊𝚜𝚜𝚢 𝙲𝚞𝚝𝚒𝚎 💕\n\n"
@@ -65,60 +75,3 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 caption=caption,
                 reply_markup=kb,
                 parse_mode=ParseMode.HTML,
-            )
-        except BadRequest:
-            await update.message.reply_text(text=caption, reply_markup=kb, parse_mode=ParseMode.HTML)
-
-
-async def start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    data = query.data
-
-    if data == "return_start":
-        await start_handler(update, context)
-
-    elif data == "talk_baka":
-        talk_text = "💬 To talk to me, just send me any message!"
-        try:
-            await query.message.edit_caption(caption=talk_text, reply_markup=get_back_to_start(), parse_mode=ParseMode.HTML)
-        except BadRequest:
-            try:
-                await query.message.edit_text(text=talk_text, reply_markup=get_back_to_start(), parse_mode=ParseMode.HTML)
-            except BadRequest:
-                pass
-
-    elif data == "game_features":
-        game_text = (
-            "🎮 <b>CATVERSE GAME MODE</b>\n\n"
-            "⚔️ <b>Battle:</b> /rob, /kill, /protect\n"
-            "💰 <b>Economy:</b> /daily, /claim, /bal, /give\n"
-            "🛒 <b>Shop:</b> /shop, /inventory, /use\n"
-            "🐟 <b>Fishing:</b> /fish, /fishlb\n"
-            "📊 <b>Ranks:</b> /xp, /meow, /toprich, /topkill\n"
-            "💣 <b>Mini Games:</b> /bomb, /join, /pass\n"
-            "🌸 <b>Collection:</b> Waifu drops in active groups\n\n"
-            "Use /games for full guide and start grinding coins! 🪙"
-        )
-        try:
-            await query.message.edit_caption(caption=game_text, reply_markup=get_back_to_start(), parse_mode=ParseMode.HTML)
-        except BadRequest:
-            try:
-                await query.message.edit_text(text=game_text, reply_markup=get_back_to_start(), parse_mode=ParseMode.HTML)
-            except BadRequest:
-                pass
-
-    await query.answer()
-
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = (
-        "🛡 <b>Admin Commands:</b>\n"
-        "/kick /ban /mute /unmute /unban (reply based)\n\n"
-        "💰 <b>Economy:</b> /daily /claim /bal /give /gift /shop /inventory /use\n"
-        "⚔️ <b>Combat:</b> /rob /kill /protect\n"
-        "🎮 <b>Game:</b> /games /fish /fishlb /toprich /topkill /xp /meow\n"
-    )
-    await update.message.reply_text(text=help_text, parse_mode=ParseMode.HTML)
-
-
-__all__ = ["start_handler", "start_callback", "help_command", "get_start_keyboard", "get_back_to_start"]
