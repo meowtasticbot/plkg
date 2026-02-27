@@ -114,7 +114,11 @@ from Meowstric.plugins.admin import admin_commands, plp, welcome_new_member
 from Meowstric.plugins.broadcast import gbroadcast, ubroadcast
 from Meowstric.plugins.chatbot import chat_handler
 from Meowstric.plugins.economy import bal, claim, daily, gift, give, inventory, rob, use
-from Meowstric.plugins.events import chat_member_update as member_update
+from Meowstric.plugins.events import (
+    chat_member_update as member_update,
+    close_economy,
+    open_economy,
+)
 from Meowstric.plugins.game import (
     fish,
     fishlb,
