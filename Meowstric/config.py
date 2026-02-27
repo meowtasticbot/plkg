@@ -29,3 +29,14 @@ DIVORCE_COST = int(os.getenv("DIVORCE_COST", "5000"))
 START_TIME = int(os.getenv("START_TIME", str(int(time.time()))))
 WAIFU_PROPOSE_COST = int(os.getenv("WAIFU_PROPOSE_COST", "1500"))
 MIN_CLAIM_MEMBERS = int(os.getenv("MIN_CLAIM_MEMBERS", "1000"))
+
+
+# Chatbot settings
+CHATBOT_NAME = os.getenv("CHATBOT_NAME", "kitty")
+CHATBOT_OWNER_USERNAME = os.getenv("CHATBOT_OWNER_USERNAME", "@Moon_m_5")
+CHATBOT_USERNAME = os.getenv("BOT_USERNAME", "")
+CHATBOT_TRIGGERS = tuple(
+    x.strip().lower()
+    for x in os.getenv("CHATBOT_TRIGGERS", "billi,cat,meow").split(",")
+    if x.strip()
+)
