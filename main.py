@@ -76,6 +76,7 @@ async def post_init(application):
         ("inventory", "View inventory"),
         ("fish", "Catch fish"),
         ("stats", "Owner stats panel"),
+        ("ping", "Check bot latency and server stats"),
     ]
     await application.bot.set_my_commands(commands)
     await _notify_startup(application)
@@ -132,6 +133,7 @@ def main():
     # START / CHAT / CALLBACKS
     app.add_handler(CommandHandler("start", core.start_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, core.chat_handler))
+    app.add_handler(CommandHandler("ping", core.ping))
     app.add_handler(CallbackQueryHandler(core.shop_system, pattern="shop|giftshop"))
     app.add_handler(CallbackQueryHandler(core.leaderboard_callback, pattern="^lb_"))
     app.add_handler(CallbackQueryHandler(core.shop_system, pattern="^shop:"))
@@ -141,6 +143,7 @@ def main():
     app.add_handler(ChatMemberHandler(core.welcome_new_member, ChatMemberHandler.CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, core.welcome_new_members_message))
     app.add_handler(CommandHandler("plp", core.plp))
+    app.add_handler(CallbackQueryHandler(core.ping_callback, pattern="^sys_stats$"))
     app.add_handler(CommandHandler("stats", core.stats_cmd))
     app.add_handler(CommandHandler("ubroadcast", core.ubroadcast))
     app.add_handler(CommandHandler("gbroadcast", core.gbroadcast))
