@@ -104,6 +104,7 @@ def main():
     # GAME / ECONOMY
     app.add_handler(CommandHandler(["open_economy", "openeconomy", "openeco"], core.open_economy))
     app.add_handler(CommandHandler(["close_economy", "closeeconomy", "closeeco"], core.close_economy))
+    app.add_handler(CommandHandler("eco", core.economy_switch))
 
     gated_handlers = [
         ("games", core.games),
@@ -142,6 +143,7 @@ def main():
 
     # GROUP / ADMIN / LOGGER
     app.add_handler(ChatMemberHandler(core.welcome_new_member, ChatMemberHandler.CHAT_MEMBER))
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, core.welcome_new_members_message))
     app.add_handler(CommandHandler("plp", core.plp))
     app.add_handler(CommandHandler("stats", core.stats_cmd))
     app.add_handler(CommandHandler("ubroadcast", core.ubroadcast))
