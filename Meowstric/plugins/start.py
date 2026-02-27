@@ -67,11 +67,68 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.edit_text(text=caption, reply_markup=kb, parse_mode=ParseMode.HTML)
             except BadRequest:
                 pass
-    else:
-        
+    else:       
         try:
             await update.message.reply_photo(
                 photo=START_IMG_URL,
                 caption=caption,
                 reply_markup=kb,
                 parse_mode=ParseMode.HTML,
+            )
+        except BadRequest:
+            await update.message.reply_text(
+                caption,
+                reply_markup=kb,
+                parse_mode=ParseMode.HTML,
+            )
+
+
+async def start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query:
+        return
+
+    data = query.data or ""
+
+    if data == "return_start":
+        await query.answer()
+        return await start_handler(update, context)
+
+    if data == "talk_baka":
+        await query.answer("Baka mode on 😼")
+        text = (
+            "😼 <b>Baka Chat Mode</b>\n\n"
+            "Just send me any normal text message and I will reply.\n"
+            "Use game/economy commands from menu too."
+        )
+    elif data == "game_features":
+        await query.answer("Opening game guide 🎮")
+        text = (
+            "🎮 <b>Game Features</b>\n\n"
+            "• /daily - Daily coins\n"
+            "• /claim - Group claim reward\n"
+            "• /bal - Check wallet\n"
+            "• /rob, /kill, /protect - PvP actions\n"
+            "• /shop, /inventory, /use - Items\n"
+            "• /fish, /fishlb - Fishing system\n"
+            "• /toprich, /topkill, /xp - Leaderboards"
+        )
+    else:
+        await query.answer()
+        return
+
+    try:
+        await query.message.edit_caption(
+            caption=text,
+            reply_markup=get_back_to_start(),
+            parse_mode=ParseMode.HTML,
+        )
+    except BadRequest:
+        await query.message.edit_text(
+            text=text,
+            reply_markup=get_back_to_start(),
+            parse_mode=ParseMode.HTML,
+        )
+
+
+__all__ = ["start_handler", "start_callback"]
