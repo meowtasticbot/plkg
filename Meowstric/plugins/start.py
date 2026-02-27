@@ -6,7 +6,7 @@ from telegram.constants import ParseMode
 from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 
-from Meowstric.config import BOT_NAME, OWNER_LINK, START_IMG_URL, SUPPORT_GROUP
+from Meowstric.config import BOT_NAME, OWNER_LINK, SUPPORT_GROUP
 from Meowstric.utils import ensure_user_exists, log_to_channel, track_group
 
 
@@ -71,7 +71,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:       
         try:
             await update.message.reply_photo(
-                photo=START_IMG_URL,
+                photo="https://img.sanishtech.com/u/7a53054460bf7f0318de8cb3e838412a.png",
                 caption=caption,
                 reply_markup=kb,
                 parse_mode=ParseMode.HTML,
