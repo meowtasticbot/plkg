@@ -5,3 +5,5 @@ pytz
 aiohttp
 aiogram
 groq
+psutil
+httpx
