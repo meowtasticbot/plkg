@@ -13,7 +13,7 @@ from Meowstric.utils import ensure_user_exists, log_to_channel, track_group
 def get_start_keyboard(bot_username):
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("💬 Chat with Meowstric", callback_data="talk_baka"),
+            InlineKeyboardButton("💬 Chat with Meow", callback_data="talk_baka"),
             InlineKeyboardButton("⚡ Owner", url=OWNER_LINK),
         ],
         [
