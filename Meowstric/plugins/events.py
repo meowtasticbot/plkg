@@ -40,7 +40,7 @@ async def close_economy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await update.message.reply_text("Only admins can use this.")
 
     groups_collection.update_one({"chat_id": chat.id}, {"$set": {"economy_enabled": False}}, upsert=True)
-        await log_to_channel(
+    await log_to_channel(
         context.bot,
         "economy_closed",
         {
