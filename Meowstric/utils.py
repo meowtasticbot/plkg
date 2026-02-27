@@ -2,7 +2,7 @@ import html
 from datetime import datetime
 
 from telegram import Chat, User
-from telegram.constants import ChatType
+from telegram.constants import ChatType, ParseMode
 
 from Meowstric.config import BOT_NAME, LOGGER_ID, OWNER_ID, SUDO_IDS
 from Meowstric.database import groups, groups_collection, sudoers_collection, users, users_collection
