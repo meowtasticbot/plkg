@@ -134,6 +134,7 @@ def main():
     app.add_handler(CommandHandler("start", core.start_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, core.chat_handler))
     app.add_handler(CommandHandler("ping", core.ping))
+    app.add_handler(MessageHandler(filters.Sticker.ALL, core.tidal_sticker_reply))
     app.add_handler(CallbackQueryHandler(core.shop_system, pattern="shop|giftshop"))
     app.add_handler(CallbackQueryHandler(core.leaderboard_callback, pattern="^lb_"))
     app.add_handler(CallbackQueryHandler(core.shop_system, pattern="^shop:"))
