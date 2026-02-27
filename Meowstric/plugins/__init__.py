@@ -1,16 +1,8 @@
-from .admin import *
-from .bomb import *
-from .broadcast import *
-from .chatbot import *
-from .collection import *
-from .economy import *
-from .events import *
-from .game import *
-from .ping import *
-from .profile import *
-from .shop import *
-from .social import *
-from .start import *
-from .stats import *
-from .waifu import *
-from .welcome import *
+"""Plugin package for Meowstric.
+
+Avoid eager star-imports here because plugin modules depend on symbols from
+`catverse_bot`, and importing them all at package import time creates circular
+imports during startup.
+"""
+
+__all__: list[str] = []
