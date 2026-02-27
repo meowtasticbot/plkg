@@ -113,7 +113,7 @@ def calculate_global_rank(user_id: int) -> int:
 from Meowstric.plugins.admin import admin_commands, plp, welcome_new_member, welcome_new_members_message
 from Meowstric.plugins.broadcast import gbroadcast, ubroadcast
 from Meowstric.plugins.ping import ping, ping_callback
-from Meowstric.plugins.chatbot import chat_handler
+from Meowstric.plugins.chatbot import chat_handler, tidal_sticker_reply
 from Meowstric.plugins.economy import bal, claim, daily, gift, give, inventory, rob, use
 from Meowstric.plugins.events import (
     chat_member_update as member_update,
