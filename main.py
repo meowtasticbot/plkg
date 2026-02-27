@@ -75,6 +75,12 @@ async def post_init(application):
         ("shop", "Open item shop"),
         ("inventory", "View inventory"),
         ("fish", "Catch fish"),
+        ("bomb", "Start bomb game with entry fee"),
+        ("join", "Join active bomb game"),
+        ("pass", "Pass bomb to next player"),
+        ("bombrank", "Bomb wins leaderboard"),
+        ("mybomb", "Your bomb game stats"),
+        ("cancelbomb", "Owner: cancel bomb game"),
         ("stats", "Owner stats panel"),
         ("ping", "Check bot latency and server stats"),
         ("waifu", "Random waifu image"),
@@ -129,6 +135,12 @@ def main():
         ("fun", core.fun),
         ("upgrade", core.upgrade),
         ("fishlb", core.fishlb),
+        ("bomb", core.start_bomb),
+        ("join", core.join_bomb),
+        ("pass", core.pass_bomb),
+        ("bombrank", core.bomb_leaders),
+        ("mybomb", core.bomb_myrank),
+        ("cancelbomb", core.bomb_cancel),
     ]
     for name, fn in gated_handlers:
         app.add_handler(CommandHandler(name, _economy_enabled_only(fn)))
