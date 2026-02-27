@@ -31,8 +31,25 @@ async def close_economy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if member.status not in [ChatMember.ADMINISTRATOR, ChatMember.OWNER]:
         return await update.message.reply_text("Only admins can use this.")
 
-    groups_collection.update_one({"chat_id": chat.id}, {"$set": {"economy_enabled": False}}, upsert=True)
-@@ -54,32 +54,55 @@ async def claim_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
+      groups_collection.update_one({"chat_id": chat.id}, {"$set": {"economy_enabled": False}}, upsert=True)
+async def claim_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Economy and games disabled.")
+
+
+async def claim_group(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat, user = update.effective_chat, update.effective_user
+    if chat.type == ChatType.PRIVATE:
+        return await update.message.reply_text("Use this in group only.")
+
+    members_count = await chat.get_member_count()
+    if members_count < MIN_CLAIM_MEMBERS:
+        return await update.message.reply_text(
+            f"Need at least {MIN_CLAIM_MEMBERS} members to claim reward.\nCurrent: {members_count}"
+        )
+
+    group = groups_collection.find_one({"chat_id": chat.id}) or {}
+    if group.get("reward_claimed"):
+        return await update.message.reply_text("This group reward is already claimed.")
 
     reward = 10000 if members_count < 500 else 25000
     ensure_user_exists(user)
@@ -77,6 +94,8 @@ async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE)
             },
         )
         groups_collection.update_one({"chat_id": chat.id}, {"$set": {"active": False}})
+    elif new.status in [ChatMember.LEFT, ChatMember.BANNED]:
+        groups_collection.update_one({"chat_id": chat.id}, {"$set": {"active": False}}, upsert=True)
         await log_to_channel(
             context.bot,
             "bot_removed",
