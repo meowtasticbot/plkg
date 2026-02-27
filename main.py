@@ -102,7 +102,7 @@ def main():
     )
 
     # GAME / ECONOMY
-   app.add_handler(CommandHandler(["open_economy", "openeconomy", "openeco"], core.open_economy))
+    app.add_handler(CommandHandler(["open_economy", "openeconomy", "openeco"], core.open_economy))
     app.add_handler(CommandHandler(["close_economy", "closeeconomy", "closeeco"], core.close_economy))
 
     gated_handlers = [
