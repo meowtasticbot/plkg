@@ -31,7 +31,6 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
     joined_statuses = {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER}
     left_statuses = {ChatMemberStatus.LEFT, ChatMemberStatus.BANNED}
 
-@@ -57,28 +57,123 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if new_status in joined_statuses and old_status not in joined_statuses:
         messages = [
             f"🎉 Welcome {member.first_name}! Khush aamdeed! 😊",
