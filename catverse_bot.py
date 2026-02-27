@@ -140,6 +140,7 @@ from Meowstric.plugins.shop import shop, shop_system
 from Meowstric.plugins.start import start_callback, start_handler
 from Meowstric.plugins.stats import stats_cmd
 from Meowstric.plugins.waifu import SFW_ACTIONS, waifu_action, waifu_cmd, wmarry, wpropose
+from Meowstric.plugins.bomb import bomb_cancel, bomb_leaders, bomb_myrank, join_bomb, pass_bomb, start_bomb
 
 
 async def button_handler(update, context):
