@@ -4,7 +4,7 @@ import time
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MONGO_URI = os.getenv("MONGO_URI")
 OWNER_ID = int(os.getenv("OWNER_ID", "7789325573"))
-LOGGER_GROUP_ID = int(os.getenv("LOGGER_GROUP_ID", "-1002024032988"))
+LOGGER_GROUP_ID = int(os.getenv("LOGGER_GROUP_ID", "-1003833185152"))
 LOGGER_ID = int(os.getenv("LOGGER_ID", str(LOGGER_GROUP_ID)))
 BOT_NAME = os.getenv("BOT_NAME", "Meowstric 😺")
 
