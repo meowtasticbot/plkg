@@ -139,6 +139,7 @@ from Meowstric.plugins.profile import meow, xp
 from Meowstric.plugins.shop import shop, shop_system
 from Meowstric.plugins.start import start_callback, start_handler
 from Meowstric.plugins.stats import stats_cmd
+from Meowstric.plugins.waifu import SFW_ACTIONS, waifu_action, waifu_cmd, wmarry, wpropose
 
 
 async def button_handler(update, context):
