@@ -3,7 +3,6 @@
 
 import logging
 
-from telegram import ChatMember
 from telegram.constants import ChatType
 from telegram.ext import (
     ApplicationBuilder,
@@ -24,23 +23,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def _group_admin_only_when_economy_opened(handler):
+def _economy_enabled_only(handler):
     async def wrapped(update, context):
         chat = update.effective_chat
-        user = update.effective_user
 
-        if not chat or chat.type == ChatType.PRIVATE or not user:
+        if not chat or chat.type == ChatType.PRIVATE:
             return await handler(update, context)
 
         group = core.groups_collection.find_one({"chat_id": chat.id}) or core.groups_collection.find_one({"_id": chat.id}) or {}
-        if group.get("economy_enabled", True):
-            try:
-                member = await chat.get_member(user.id)
-            except Exception:
-                return await update.message.reply_text("⚠️ Unable to verify admin status right now.")
-
-            if member.status not in [ChatMember.ADMINISTRATOR, ChatMember.OWNER]:
-                return await update.message.reply_text("🚫 Economy open hai, lekin group me games/economy commands sirf admins use kar sakte hain.")
+        if not group.get("economy_enabled", True):
+            return await update.message.reply_text(
+                "🚫 Group economy/games abhi OFF hai.\n"
+                "Admin se bolo: /eco on"
+            )
 
         return await handler(update, context)
 
@@ -132,7 +127,7 @@ def main():
         ("fishlb", core.fishlb),
     ]
     for name, fn in gated_handlers:
-        app.add_handler(CommandHandler(name, _group_admin_only_when_economy_opened(fn)))
+        app.add_handler(CommandHandler(name, _economy_enabled_only(fn)))
 
     # START / CHAT / CALLBACKS
     app.add_handler(CommandHandler("start", core.start_handler))
