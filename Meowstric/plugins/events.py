@@ -19,6 +19,22 @@ async def open_economy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await update.message.reply_text("Only admins can use this.")
 
     groups_collection.update_one({"chat_id": chat.id}, {"$set": {"economy_enabled": True}}, upsert=True)
+        await log_to_channel(
+        context.bot,
+        "economy_closed",
+        {
+            "chat": f"{chat.title} ({chat.id})",
+            "by": f"{user.first_name} ({user.id})",
+        },
+    )
+        await log_to_channel(
+        context.bot,
+        "economy_opened",
+        {
+            "chat": f"{chat.title} ({chat.id})",
+            "by": f"{user.first_name} ({user.id})",
+        },
+    )
     await update.message.reply_text("Economy and games enabled.")
 
 
@@ -77,9 +93,7 @@ async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE)
     joined_statuses = [ChatMember.MEMBER, ChatMember.ADMINISTRATOR]
     left_statuses = [ChatMember.LEFT, ChatMember.BANNED]
 
-    if new.status in joined_statuses and old.status not in joined_statuses:
-        groups_collection.update_one({"chat_id": chat.id}, {"$set": {"title": chat.title, "active": True}}, upsert=True)
-    elif new.status in [ChatMember.LEFT, ChatMember.BANNED]:
+    if new.status in joined_statuses and old.status in left_statuses:
         await context.bot.send_message(
             chat_id=chat.id,
             text="😺 Thanks for adding me! I'm online and ready to help.\nUse /start to begin.",
@@ -92,8 +106,8 @@ async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 "status": new.status,
             },
         )
-        groups_collection.update_one({"chat_id": chat.id}, {"$set": {"active": False}})
-    elif new.status in [ChatMember.LEFT, ChatMember.BANNED]:
+        groups_collection.update_one({"chat_id": chat.id}, {"$set": {"title": chat.title, "active": True}}, upsert=True)
+    elif new.status in left_statuses and old.status not in left_statuses:
         groups_collection.update_one({"chat_id": chat.id}, {"$set": {"active": False}}, upsert=True)
         await log_to_channel(
             context.bot,
