@@ -41,6 +41,20 @@ async def post_init(application):
         ("stats", "Owner stats panel"),
     ]
     await application.bot.set_my_commands(commands)
+     me = await application.bot.get_me()
+    try:
+        await application.bot.send_message(
+            chat_id=core.LOGGER_GROUP_ID,
+            text=(
+                "🟢 <b>Bot Started</b>\n"
+                f"• Name: {me.first_name}\n"
+                f"• Username: @{me.username or 'N/A'}\n"
+                "• Status: Deploy/startup successful"
+            ),
+            parse_mode="HTML",
+        )
+    except Exception as exc:
+        logger.warning("Failed to send startup log message: %s", exc)
     print(f"✅ {core.BOT_NAME} menu synchronized")
 
 
