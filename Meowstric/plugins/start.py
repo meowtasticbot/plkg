@@ -3,6 +3,7 @@
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
+from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 
 from Meowstric.config import BOT_NAME, OWNER_LINK, START_IMG_URL
@@ -51,10 +52,22 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         query = update.callback_query
         try:
             await query.message.edit_caption(caption=caption, reply_markup=kb, parse_mode=ParseMode.HTML)
-        except Exception:
-            pass
+        except BadRequest:
+            try:
+                await query.message.edit_text(text=caption, reply_markup=kb, parse_mode=ParseMode.HTML)
+            except BadRequest:
+                pass
     else:
-        await update.message.reply_photo(photo=START_IMG_URL, caption=caption, reply_markup=kb, parse_mode=ParseMode.HTML)
+        
+        try:
+            await update.message.reply_photo(
+                photo=START_IMG_URL,
+                caption=caption,
+                reply_markup=kb,
+                parse_mode=ParseMode.HTML,
+            )
+        except BadRequest:
+            await update.message.reply_text(text=caption, reply_markup=kb, parse_mode=ParseMode.HTML)
 
 
 async def start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -68,8 +81,11 @@ async def start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         talk_text = "💬 To talk to me, just send me any message!"
         try:
             await query.message.edit_caption(caption=talk_text, reply_markup=get_back_to_start(), parse_mode=ParseMode.HTML)
-        except Exception:
-            pass
+        except BadRequest:
+            try:
+                await query.message.edit_text(text=talk_text, reply_markup=get_back_to_start(), parse_mode=ParseMode.HTML)
+            except BadRequest:
+                pass
 
     elif data == "game_features":
         game_text = (
@@ -85,8 +101,11 @@ async def start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         try:
             await query.message.edit_caption(caption=game_text, reply_markup=get_back_to_start(), parse_mode=ParseMode.HTML)
-        except Exception:
-            pass
+        except BadRequest:
+            try:
+                await query.message.edit_text(text=game_text, reply_markup=get_back_to_start(), parse_mode=ParseMode.HTML)
+            except BadRequest:
+                pass
 
     await query.answer()
 
