@@ -143,7 +143,7 @@ async def admin_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except BadRequest as exc:
         await message.reply_text(f"⚠️ Action failed: {exc.message}")
     except TelegramError:
-        await message.reply_text("⚠️ Telegram API error aayi, dobara try karo."
+        await message.reply_text("⚠️ Telegram API error aayi, dobara try karo.")
 
 async def plp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
