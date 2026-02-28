@@ -129,12 +129,6 @@ def main():
         ("fun", core.fun),
         ("upgrade", core.upgrade),
         ("fishlb", core.fishlb),
-        ("bomb", core.start_bomb),
-        ("join", core.join_bomb),
-        ("pass", core.pass_bomb),
-        ("bombrank", core.bomb_leaders),
-        ("mybomb", core.bomb_myrank),
-        ("cancelbomb", core.bomb_cancel),
     ]
     for name, fn in gated_handlers:
         app.add_handler(CommandHandler(name, _economy_enabled_only(fn)))
