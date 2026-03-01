@@ -12,7 +12,7 @@ from utils import *
 
 LEVELS = [
     ("🐱 Kitten", 0),
-    ("😺 Teen", 1200),
+    ("😺 Teen", 500),
     ("😼 Rogue", 3500),
     ("🐯 Alpha", 7000),
     ("👑 Legend", 14000),
