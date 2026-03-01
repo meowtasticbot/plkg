@@ -93,3 +93,30 @@ async def wpropose(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def wmarry(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = ensure_user_exists(update.effective_user)
+    waifus = user.get("waifus", [])
+
+    if not waifus:
+        return await update.message.reply_text(
+            "You are still single 😿\nUse /wpropose to try your luck!",
+            parse_mode=ParseMode.HTML,
+        )
+
+    latest = waifus[-1]
+    name = latest.get("name", "Unknown")
+    rarity = latest.get("rarity", "Common")
+    date = latest.get("date")
+
+    if date and hasattr(date, "strftime"):
+        married_on = date.strftime("%d %b %Y")
+    else:
+        married_on = datetime.utcnow().strftime("%d %b %Y")
+
+    msg = (
+        "💍 <b>Waifu Marriage Record</b>\n"
+        f"Partner: <b>{name}</b>\n"
+        f"Rarity: <b>{rarity}</b>\n"
+        f"Married on: <b>{married_on}</b>\n"
+        f"Total waifus: <b>{len(waifus)}</b>"
+    )
+    await update.message.reply_text(msg, parse_mode=ParseMode.HTML)
