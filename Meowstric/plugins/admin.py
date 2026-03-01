@@ -91,6 +91,9 @@ async def welcome_new_members_message(update: Update, context: ContextTypes.DEFA
     group_data = groups_collection.find_one({"chat_id": chat.id}) or {}
     if not group_data.get("welcome_enabled", True):
         return
+    inviter = update.effective_user
+    inviter_text = f"{inviter.first_name} ({inviter.id})" if inviter else "Unknown"
+    
     base_messages = [
         "🎉 <b>Welcome {name}!</b> Khush aamdeed! 😊",
         "🌟 <b>Aao ji {name}!</b> Group me warm welcome! 🫂",
@@ -101,7 +104,42 @@ async def welcome_new_members_message(update: Update, context: ContextTypes.DEFA
 
     for idx, member in enumerate(update.message.new_chat_members):
         if member.id == context.bot.id:
+            await log_to_channel(
+                context.bot,
+                "bot_added_via_message",
+                {
+                    "chat": f"{chat.title} ({chat.id})",
+                    "added_by": inviter_text,
+                    "member": f"{member.first_name} ({member.id})",
+                },
+            )
+
+            add_text = (
+                "✨ <b>Thanks for adding me!</b>\n"
+                "🎮 Fun games and economy commands are ready in this group.\n"
+                "🛠️ Bot admin ho ya na ho, normal game commands kaam karenge.\n"
+                "🚀 Try: /games  •  /bal  •  /fish"
+            )
+            try:
+                await context.bot.send_photo(
+                    chat_id=chat.id,
+                    photo=WELCOME_IMG_URL,
+                    caption=add_text,
+                    parse_mode=ParseMode.HTML,
+                )
+            except Exception:
+                await context.bot.send_message(chat.id, add_text, parse_mode=ParseMode.HTML)
             continue
+
+        await log_to_channel(
+            context.bot,
+            "group_member_joined",
+            {
+                "chat": f"{chat.title} ({chat.id})",
+                "member": f"{member.first_name} ({member.id})",
+                "added_by": inviter_text,
+            },
+        
         msg_template = base_messages[idx % len(base_messages)]
         text = (
             f"{msg_template.format(name=get_mention(member))}\n\n"
