@@ -89,7 +89,7 @@ async def post_init(application):
         ("waifu", "💞 Waifu profile + relationship menu"),
         ("wpropose", "💍 Propose to your waifu"),
         ("wmarry", "💒 Marry your waifu"),
-        ("couple", "💕 Couple system (coming soon)"),
+        ("couple", "💕 Couple of the day image"),
         ("love", "❤️ Love calculator"),
         ("voice", "🔊 Convert text to voice"),
         ("ping", "📡 Bot latency + server stats"),
@@ -152,6 +152,7 @@ def main():
     app.add_handler(CommandHandler("start", core.start_handler))
     app.add_handler(CommandHandler("help", core.help_command))
     app.add_handler(CommandHandler("love", core.love_command))
+    app.add_handler(CommandHandler("couple", core.couple))
     app.add_handler(CommandHandler(["waifu", "wifu"], core.waifu_cmd))
     app.add_handler(CommandHandler("wpropose", core.wpropose))
     app.add_handler(CommandHandler("voice", core.voice_command))
