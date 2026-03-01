@@ -1,6 +1,3 @@
-# Copyright (c) 2025 Telegram:- @WTF_Phantom <DevixOP>
-# Location: Supaul, Bihar
-
 import asyncio
 import random
 
@@ -25,6 +22,67 @@ def get_love_comment(percent):
     if percent < 80:
         return "💖 Cute!"
     return "🔥 Soulmates!"
+
+
+def get_random_message(love_percentage):
+    if love_percentage <= 30:
+        return random.choice([
+            "Love is in the air but needs a little spark.",
+            "A good start but there's room to grow.",
+            "It's just the beginning of something beautiful.",
+        ])
+    if love_percentage <= 70:
+        return random.choice([
+            "A strong connection is there. Keep nurturing it.",
+            "You've got a good chance. Work on it.",
+            "Love is blossoming, keep going.",
+        ])
+    return random.choice([
+        "Wow! It's a match made in heaven!",
+        "Perfect match! Cherish this bond.",
+        "Destined to be together. Congratulations!",
+    ])
+
+
+async def love_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    args = context.args or []
+    if len(args) < 2:
+        parts = (update.message.text or "").split()
+        args = parts[1:] if len(parts) > 1 else []
+    if len(args) < 2:
+        return await update.message.reply_text("Please enter two names after /love command.")
+
+    name1 = args[0].strip()
+    name2 = args[1].strip()
+    love_percentage = random.randint(10, 100)
+    love_message = get_random_message(love_percentage)
+
+    response = f"{name1}💕 + {name2}💕 = {love_percentage}%\n\n{love_message}"
+    await update.message.reply_text(response)
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (
+        "🛡️ <b>Admin Commands (. or / both)</b>\n"
+        "<code>.warn [reply]</code> - Warn a user (3 = ban)\n"
+        "<code>.unwarn [reply]</code> - Remove 1 warning\n"
+        "<code>.mute [reply]/[user id] [time]</code> - Mute temporarily/permanently\n"
+        "<code>.unmute [reply]/[user id]</code> - Unmute the user\n"
+        "<code>.ban [reply]/[user id]</code> - Ban user\n"
+        "<code>.unban [reply]/[user id]</code> - Unban user\n"
+        "<code>.kick [reply]/[user id]</code> - Kick from group\n"
+        "<code>.promote [reply]/[user id] 1/2/3</code> - Promote user to admin\n"
+        "<code>.demote [reply]/[user id]</code> - Demote admin\n"
+        "<code>.title [reply]/[user id] [tag]</code> - Set custom title\n"
+        "<code>.pin [reply]</code> - Pin a message\n"
+        "<code>.unpin</code> - Unpin the current message\n"
+        "<code>.d</code> - Delete a message\n"
+        "<code>.help</code> - Show this help\n\n"
+        "💘 <b>Fun</b>\n"
+        "<code>/love name1 name2</code> - Love calculator\n"
+        "<code>/hug /bite /slap /punch /kiss /truth /dare</code>"
+    )
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
 async def couple_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -52,99 +110,7 @@ async def couple_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💟 <b>Score:</b> {percent}%\n"
         f"<code>{get_progress_bar(percent)}</code>\n"
         f"💭 <i>{get_love_comment(percent)}</i>"
-    )
-    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
-
-
-async def propose(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    sender = ensure_user_exists(update.effective_user)
-    if sender.get("partner_id"):
-        return await update.message.reply_text("❌ Married!", parse_mode=ParseMode.HTML)
-
-    target_arg = context.args[0] if context.args else None
-    target, error = await resolve_target(update, context, specific_arg=target_arg)
-    if not target:
-        return await update.message.reply_text(error or "Usage: <code>/propose @user</code>", parse_mode=ParseMode.HTML)
-    if target.get("user_id") == sender.get("user_id") or target.get("partner_id"):
-        return await update.message.reply_text("💔 Invalid.", parse_mode=ParseMode.HTML)
-
-    s_id, t_id = sender["user_id"], target["user_id"]
-    kb = InlineKeyboardMarkup(
-        [[
-            InlineKeyboardButton("💍 Accept", callback_data=f"marry_y|{s_id}|{t_id}"),
-            InlineKeyboardButton("🗑️ Reject", callback_data=f"marry_n|{s_id}|{t_id}"),
-        ]]
-    )
-
-    msg = await update.message.reply_text(
-        "💘 <b>Proposal!</b>\n\n"
-        f"👤 {get_mention(sender)} loves {get_mention(target)}!\n"
-        f"<i>Will you marry them?</i>\n"
-        f"⏳ 30s...",
-        reply_markup=kb,
-        parse_mode=ParseMode.HTML,
-    )
-
-    async def delete_later():
-        await asyncio.sleep(30)
-        try:
-            await context.bot.edit_message_text(
-                chat_id=update.effective_chat.id,
-                message_id=msg.message_id,
-                text="❌ Expired.",
-                parse_mode=ParseMode.HTML,
-            )
-        except Exception:
-            pass
-
-    asyncio.create_task(delete_later())
-
-
-async def marry_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    target_arg = context.args[0] if context.args else None
-    target, _ = await resolve_target(update, context, specific_arg=target_arg)
-    user = target if target else ensure_user_exists(update.effective_user)
-
-    pid = user.get("partner_id")
-    if pid:
-        p = users_collection.find_one({"$or": [{"user_id": pid}, {"_id": pid}]})
-        status = f"💍 Married to {get_mention(p) if p else pid}"
-    else:
-        status = "🦅 Single"
-
-    await update.message.reply_text(
-        f"📊 <b>Status:</b>\n👤 {get_mention(user)}\n{status}",
-        parse_mode=ParseMode.HTML,
-    )
-
-
-async def divorce(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = ensure_user_exists(update.effective_user)
-    if not user.get("partner_id"):
-        return await update.message.reply_text("🤷‍♂️ Single.", parse_mode=ParseMode.HTML)
-
-    if user.get("balance", 0) < DIVORCE_COST:
-        return await update.message.reply_text(
-            f"❌ Cost: {format_money(DIVORCE_COST)}", parse_mode=ParseMode.HTML
-        )
-
-    pid = user["partner_id"]
-    users_collection.update_one(
-        {"$or": [{"user_id": user["user_id"]}, {"_id": user["user_id"]}]},
-        {"$set": {"partner_id": None}, "$inc": {"balance": -DIVORCE_COST}},
-    )
-    users_collection.update_one(
-        {"$or": [{"user_id": pid}, {"_id": pid}]},
-        {"$set": {"partner_id": None}},
-    )
-    await update.message.reply_text(
-        f"💔 <b>Divorced!</b> Paid {format_money(DIVORCE_COST)}.",
-        parse_mode=ParseMode.HTML,
-    )
-
-
 async def proposal_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
     action, p_id, t_id = query.data.split("|")
     p_id, t_id = int(p_id), int(t_id)
 
@@ -170,4 +136,13 @@ async def proposal_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
 
-__all__ = ["couple_game", "propose", "marry_status", "divorce", "proposal_callback"]
+
+__all__ = [
+    "couple_game",
+    "propose",
+    "marry_status",
+    "divorce",
+    "proposal_callback",
+    "love_command",
+    "help_command",
+]
