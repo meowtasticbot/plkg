@@ -82,6 +82,8 @@ async def post_init(application):
         ("ping", "Check bot latency and server stats"),
         ("eco", "open or close game"),
         ("voice", "Convert text to voice"),
+        ("help", "Show admin/help commands"),
+        ("love", "Love calculator"),
     ]
     await application.bot.set_my_commands(commands)
     await _notify_startup(application)
@@ -137,7 +139,9 @@ def main():
 
     # START / CHAT / CALLBACKS
     app.add_handler(CommandHandler("start", core.start_handler))
-    app.add_handler(CommandHandler("waifu", core.waifu_cmd))
+    app.add_handler(CommandHandler("help", core.help_command))
+    app.add_handler(CommandHandler("love", core.love_command))
+    app.add_handler(CommandHandler(["waifu", "wifu"], core.waifu_cmd))
     app.add_handler(CommandHandler("wpropose", core.wpropose))
     app.add_handler(CommandHandler("voice", core.voice_command))
     app.add_handler(CommandHandler("wmarry", core.wmarry))
@@ -159,7 +163,13 @@ def main():
     app.add_handler(CommandHandler("ubroadcast", core.ubroadcast))
     app.add_handler(CommandHandler("gbroadcast", core.gbroadcast))
     app.add_handler(ChatMemberHandler(core.member_update))
-    app.add_handler(CommandHandler(["kick", "ban", "mute", "unmute", "unban"], core.admin_commands))
+    app.add_handler(CommandHandler(["kick", "ban", "mute", "unmute", "unban", "warn", "unwarn", "promote", "demote", "title", "pin", "unpin", "d"], core.admin_commands))
+
+    # Dot-prefixed command support (.cmd)
+    app.add_handler(MessageHandler(filters.Regex(r"^\.(help)(?:\s|$)"), core.help_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^\.(love)(?:\s|$)"), core.love_command))
+    app.add_handler(MessageHandler(filters.Regex(r"^\.(hug|bite|slap|punch|kiss|truth|dare)(?:\s|$)"), core.waifu_action))
+    app.add_handler(MessageHandler(filters.Regex(r"^\.(kick|ban|mute|unmute|unban|warn|unwarn|promote|demote|title|pin|unpin|d)(?:\s|$)"), core.admin_commands))
 
     print(f"🚀 {core.BOT_NAME} main engine online")
     app.run_polling(drop_pending_updates=True)
