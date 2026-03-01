@@ -258,7 +258,7 @@ async def protect(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ❗ Show usage if no argument
     if not context.args:
-        return await update.message.reply_text("⚠️ Usage: /protection 1d")
+        return await update.message.reply_text("⚠️ Usage: /protect 1d")
 
     # ❌ Only 1d allowed
     if context.args[0].lower() != "1d":
