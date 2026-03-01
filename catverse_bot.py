@@ -152,7 +152,8 @@ async def button_handler(update, context):
         return
 
     data = query.data or ""
-     if data in {"return_start", "talk_baka", "show_features", "game_features"}:
+    start_callbacks = {"return_start", "talk_baka", "show_features", "game_features"}
+    if data in start_callbacks:
         await start_callback(update, context)
         return
 
