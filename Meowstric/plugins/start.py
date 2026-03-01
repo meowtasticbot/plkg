@@ -15,15 +15,15 @@ START_IMAGE_PATH = Path(__file__).resolve().parent.parent / "assets" / "123344.j
 def get_start_keyboard(bot_username):
     return InlineKeyboardMarkup([
         [
+            InlineKeyboardButton("➕ Add Me To Your Group", url=f"https://t.me/{bot_username}?startgroup=true")
+        ],
+        [
             InlineKeyboardButton("💬 Chat with Meow", callback_data="talk_baka"),
-            InlineKeyboardButton("⚡ Owner", url=OWNER_LINK),
+            InlineKeyboardButton("🔥 Cool Features", callback_data="show_features"),
         ],
         [
             InlineKeyboardButton("🎮 Game Zone", callback_data="game_features"),
             InlineKeyboardButton("🛟 Support", url=SUPPORT_GROUP)
-        ],
-        [
-            InlineKeyboardButton("➕ Add Me To Your Group", url=f"https://t.me/{bot_username}?startgroup=true")
         ],
     ])
 
@@ -50,13 +50,14 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     caption = (
-        f"🌟 <b>Welcome {user.first_name}!</b>\n"
-        f"I am <b>{BOT_NAME}</b> — your stylish group manager + fun AI bestie. 😺\n\n"
-        "✨ <b>What I can do for you:</b>\n"
-        "• Smart AI chat replies\n"
-        "• Economy + games + rankings\n"
-        "• Group tools, moderation and more\n\n"
-        "👇 Tap any button and let's start the fun."
+        "💫 <b>Welcome to the Meowverse!</b>\n"
+        f"Hey <b>{user.first_name}</b> — I am <b>{BOT_NAME}</b>, your premium AI + group power bot. 😺\n\n"
+        "⚡ <b>Why people love me:</b>\n"
+        "• Smooth AI chat with smart replies\n"
+        "• Addictive games, economy & leaderboards\n"
+        "• Powerful moderation and utility tools\n"
+        "• Fast, stylish and made for fun communities\n\n"
+        "🎯 <b>Tap a button below to explore.</b>"
     )
 
     kb = get_start_keyboard(context.bot.username)
@@ -101,9 +102,19 @@ async def start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "talk_baka":
         await query.answer("Meowstric is ready 😼")
         text = (
-            "😼 <b>Meowstric Chat Mode Activated</b>\n\n"
-            "Send me any text message and I'll reply smartly.\n"
-            "For best response in groups, reply to my message or start with hi/hey/meow."
+            "😼 <b>Chat Mode Activated</b>\n\n"
+            "Drop any message and I'll answer instantly with smart AI style.\n"
+            "In groups, reply to my message or start with hi/hey/meow for best response."
+        )
+    elif data == "show_features":
+        await query.answer("Loading top features ✨")
+        text = (
+            "🔥 <b>Top Features</b>\n\n"
+            "• AI replies with personality\n"
+            "• Welcome + moderation support\n"
+            "• Couple/profile/social commands\n"
+            "• Fun events, voice & utility tools\n"
+            "• Fast inline menus for easy use"
         )
     elif data == "game_features":
         await query.answer("Opening game menu 🎮")
