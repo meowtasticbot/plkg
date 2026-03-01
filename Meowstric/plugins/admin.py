@@ -59,18 +59,7 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
     joined_statuses = {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER}
     left_statuses = {ChatMemberStatus.LEFT, ChatMemberStatus.BANNED}
 
-    if new_status in joined_statuses and old_status not in joined_statuses:
-
-        await log_to_channel(
-            context.bot,
-            "member_added",
-            {
-                "chat": f"{chat.title} ({chat.id})",
-                "user": f"{member.first_name} ({member.id})",
-                "username": f"@{member.username}" if member.username else "N/A",
-            },
-        )
-    elif new_status in left_statuses and old_status not in left_statuses:
+    if new_status in left_statuses and old_status not in left_statuses
         await log_to_channel(
             context.bot,
             "member_removed",
@@ -131,15 +120,7 @@ async def welcome_new_members_message(update: Update, context: ContextTypes.DEFA
                 await context.bot.send_message(chat.id, add_text, parse_mode=ParseMode.HTML)
             continue
 
-        await log_to_channel(
-            context.bot,
-            "group_member_joined",
-            {
-                "chat": f"{chat.title} ({chat.id})",
-                "member": f"{member.first_name} ({member.id})",
-                "added_by": inviter_text,
-            },
-        )     
+   
         msg_template = base_messages[idx % len(base_messages)]
         text = (
             f"{msg_template.format(name=get_mention(member))}\n\n"
