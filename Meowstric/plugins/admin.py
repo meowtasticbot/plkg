@@ -326,7 +326,7 @@ async def plp(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "👑 Sudo users:\n" + "\n".join([f"• <code>{uid}</code>" for uid in sudo_list])
         return await message.reply_text(text, parse_mode="HTML")
 
-    if len(context.args) < 2
+    if len(context.args) < 2:
         return await message.reply_text("Pass a user_id too. Example: /plp add 123456")
 
     try:
