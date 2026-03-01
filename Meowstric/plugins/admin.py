@@ -58,7 +58,7 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     left_statuses = {ChatMemberStatus.LEFT, ChatMemberStatus.BANNED}
 
-    if new_status in left_statuses and old_status not in left_statuses
+    if new_status in left_statuses and old_status not in left_statuses:
         await log_to_channel(
             context.bot,
             "member_removed",
