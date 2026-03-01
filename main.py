@@ -81,6 +81,7 @@ async def post_init(application):
         ("stats", "Owner stats panel"),
         ("ping", "Check bot latency and server stats"),
         ("eco", "open or close game"),
+        ("voice", "Convert text to voice"),
     ]
     await application.bot.set_my_commands(commands)
     await _notify_startup(application)
@@ -138,6 +139,7 @@ def main():
     app.add_handler(CommandHandler("start", core.start_handler))
     app.add_handler(CommandHandler("waifu", core.waifu_cmd))
     app.add_handler(CommandHandler("wpropose", core.wpropose))
+    app.add_handler(CommandHandler("voice", core.voice_command))
     app.add_handler(CommandHandler("wmarry", core.wmarry))
     app.add_handler(CommandHandler(core.SFW_ACTIONS, core.waifu_action))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, core.chat_handler))
