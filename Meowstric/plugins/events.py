@@ -110,15 +110,24 @@ async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE)
     left_statuses = [ChatMember.LEFT, ChatMember.BANNED]
 
     if new.status in joined_statuses and old.status in left_statuses:
+        adder = update.my_chat_member.from_user or update.effective_user
+        adder_text = f"{adder.first_name} ({adder.id})" if adder else "Unknown"
         await context.bot.send_message(
             chat_id=chat.id,
-            text="😺 Thanks for adding me! I'm online and ready to help.\nUse /start to begin.",
+            text=(
+                "✨ <b>Thanks for adding me to this group!</b>\n"
+                "🎮 Games, economy, and fun commands are ready.\n"
+                "🧩 I can work even without admin rights for normal game commands.\n"
+                "🚀 Type /games or /start to begin."
+            ),
+            parse_mode=ParseMode.HTML,
         )
         await log_to_channel(
             context.bot,
             "bot_added",
             {
                 "chat": f"{chat.title} ({chat.id})",
+                "added_by": adder_text
                 "status": new.status,
             },
         )
