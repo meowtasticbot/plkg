@@ -109,7 +109,7 @@ async def couple_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔺 {get_mention(user2)}\n\n"
         f"💟 <b>Score:</b> {percent}%\n"
         f"<code>{get_progress_bar(percent)}</code>\n"
-        f"💭 <i>{get_love_comment(percent)}</i>"
+        f"💭 <i>{get_love_comment(percent)}</i>")
 async def proposal_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     action, p_id, t_id = query.data.split("|")
     p_id, t_id = int(p_id), int(t_id)
