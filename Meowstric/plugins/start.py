@@ -55,8 +55,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⚡ <b>Why people love me:</b>\n"
         "• Smooth AI chat with smart replies\n"
         "• Addictive games, economy & leaderboards\n"
-        "• Powerful moderation and utility tools\n"
-        "• Fast, stylish and made for fun communities\n\n"
+        "• Powerful moderation and utility toolsn\n\n"
         "🎯 <b>Tap a button below to explore.</b>"
     )
 
