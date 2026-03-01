@@ -7,3 +7,5 @@ aiogram
 groq
 psutil
 httpx
+gTTS
+langdetect
