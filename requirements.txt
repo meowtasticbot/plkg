@@ -9,3 +9,4 @@ psutil
 httpx
 gTTS
 langdetect
+Pillow
