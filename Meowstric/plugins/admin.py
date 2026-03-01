@@ -56,7 +56,6 @@ async def welcome_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
     new_status = update.chat_member.new_chat_member.status
     member = update.chat_member.new_chat_member.user
 
-    joined_statuses = {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER}
     left_statuses = {ChatMemberStatus.LEFT, ChatMemberStatus.BANNED}
 
     if new_status in left_statuses and old_status not in left_statuses
