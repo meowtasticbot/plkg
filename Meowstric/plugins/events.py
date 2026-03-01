@@ -127,7 +127,7 @@ async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "bot_added",
             {
                 "chat": f"{chat.title} ({chat.id})",
-                "added_by": adder_text
+                "added_by": adder_text,
                 "status": new.status,
             },
         )
