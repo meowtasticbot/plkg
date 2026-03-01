@@ -14,7 +14,23 @@ from Meowstric.plugins.chatbot import ask_mistral_raw
 from Meowstric.utils import ensure_user_exists, format_money, get_mention, resolve_target
 
 API_URL = "https://api.waifu.pics"
-SFW_ACTIONS = ["kick", "happy", "wink", "poke", "dance", "cringe", "kill", "waifu", "neko", "shinobu", "bully", "cuddle", "cry", "hug", "awoo", "kiss", "lick", "pat", "smug", "bonk", "yeet", "blush", "smile", "wave", "highfive", "handhold", "nom", "bite", "glomp", "slap"]
+SFW_ACTIONS = ["hug", "bite", "slap", "punch", "kiss", "truth", "dare"]
+
+TRUTHS = [
+    "Sach bolo: apni sabse embarrassing memory kya hai? 😶",
+    "Sach bolo: kis pe secret crush hai? ❤️",
+    "Sach bolo: kabhi message karke delete kiya hai? 👀",
+    "Sach bolo: last time kab jhoot bola tha? 🤥",
+    "Sach bolo: kis aadat ko badalna chahte ho? ✨",
+]
+
+DARES = [
+    "Dare: 10 minute tak sirf emojis me baat karo 😹",
+    "Dare: group me apna favorite gaana bhejo 🎵",
+    "Dare: apne naam ke saath ek funny title lagao 5 minute ke liye 😼",
+    "Dare: jispe trust hai usko appreciation text bhejo 💌",
+    "Dare: ek positive line likho sab ke liye 🌟",
+]
 
 
 async def waifu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -28,9 +44,14 @@ async def waifu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def waifu_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cmd = update.message.text.split()[0].replace("/", "").lower()
+    cmd = update.message.text.split()[0].replace("/", "").replace(".", "").lower()
     if cmd not in SFW_ACTIONS:
         return
+
+    if cmd == "truth":
+        return await update.message.reply_text(f"🎯 <b>Truth:</b> {random.choice(TRUTHS)}", parse_mode=ParseMode.HTML)
+    if cmd == "dare":
+        return await update.message.reply_text(f"🔥 <b>Dare:</b> {random.choice(DARES)}", parse_mode=ParseMode.HTML)
 
     target_db, _ = await resolve_target(update, context)
     user = update.effective_user
@@ -44,9 +65,9 @@ async def waifu_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     s_link = get_mention(user)
     t_link = get_mention(target_db) if target_db else "the air"
     caption = f"{s_link} {cmd}s {t_link}!"
-    if cmd == "kill":
-        caption = f"{s_link} murdered {t_link} 💀"
-    if cmd == "kiss":
+    if cmd == "punch":
+        caption = f"{s_link} punched {t_link} 👊"
+    elif cmd == "kiss":
         caption = f"{s_link} kissed {t_link} 💋"
     await update.message.reply_animation(animation=url, caption=caption, parse_mode=ParseMode.HTML)
 
@@ -72,17 +93,3 @@ async def wpropose(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def wmarry(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = ensure_user_exists(update.effective_user)
-    last = user.get("last_wmarry")
-    if last and (datetime.utcnow() - last) < timedelta(hours=2):
-        return await update.message.reply_text("Cooldown! Wait 2 hours.", parse_mode=ParseMode.HTML)
-
-    async with httpx.AsyncClient() as client:
-        r = await client.get(f"{API_URL}/sfw/waifu")
-        url = r.json()["url"]
-    waifu_data = {"name": "Random Waifu", "rarity": "Rare", "date": datetime.utcnow()}
-    users_collection.update_one({"$or": [{"user_id": user['user_id']}, {"_id": user['user_id']}]}, {"$push": {"waifus": waifu_data}, "$set": {"last_wmarry": datetime.utcnow()}})
-    await update.message.reply_photo(url, caption="Married! Added to collection.", parse_mode=ParseMode.HTML)
-
-
-__all__ = ["waifu_cmd", "waifu_action", "wpropose", "wmarry", "SFW_ACTIONS"]
