@@ -139,7 +139,7 @@ async def welcome_new_members_message(update: Update, context: ContextTypes.DEFA
                 "member": f"{member.first_name} ({member.id})",
                 "added_by": inviter_text,
             },
-        
+        )     
         msg_template = base_messages[idx % len(base_messages)]
         text = (
             f"{msg_template.format(name=get_mention(member))}\n\n"
